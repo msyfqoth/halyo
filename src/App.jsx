@@ -302,50 +302,51 @@ function TradeApp({ initialProfile = "Balanced" }){
               <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:40,textAlign:"center",color:C.dim,fontFamily:C.mono}}>Loading {asset}…</div>
             ):(
               <>
-                {/* ── VERDICT panel: big BUY / SELL / HOLD ── */}
+                {/* ── STRATEGY STATE panel: descriptive, educational — not a trade instruction ── */}
                 {(()=>{
                   const on=liveSignal?.on;
                   const fresh=liveSignal?.fresh;
-                  // Map strategy state → one-word verdict
-                  let verdict,vColor,vSub;
+                  // Map strategy state → a NEUTRAL, descriptive label (learning lens, not a call to act)
+                  let state,sColor,sSub;
                   if(on&&fresh){
-                    verdict="BUY"; vColor=C.accent;
-                    vSub="The strategy would open a position today.";
+                    state="TREND STARTED"; sColor=C.accent;
+                    sSub="This strategy's rules just flipped to \"in trend\" today. Studying what happens next — and how often these turn into real moves vs. false starts — is the whole point.";
                   }else if(!on&&fresh){
-                    verdict="SELL"; vColor=C.danger;
-                    vSub="The strategy would close its position today.";
+                    state="TREND ENDED"; sColor=C.warn;
+                    sSub="The rules just flipped to \"out of trend\" today. Notice how the strategy would have stepped aside here — exiting is as important to study as entering.";
                   }else if(on){
-                    verdict="HOLD"; vColor=C.blue;
-                    vSub=`The strategy would keep holding — in a trend for ${liveSignal.daysIn} days.`;
+                    state="IN A TREND"; sColor=C.blue;
+                    sSub=`By this strategy's rules, the market has been trending for ${liveSignal.daysIn} days. Watch how long trends persist — and how often they reverse right after you'd expect them to continue.`;
                   }else{
-                    verdict="HOLD"; vColor=C.dim;
-                    vSub="The strategy would stay in cash and wait — no entry signal right now.";
+                    state="NO CLEAR TREND"; sColor=C.dim;
+                    sSub="The rules show no trend right now — the strategy would be sitting in cash. Most of the time looks like this. Learning to do nothing is a real skill.";
                   }
                   const wr=testBT.metrics.winRate;
                   return(
-                    <div style={{background:C.panel,border:`1.5px solid ${vColor}`,borderRadius:14,padding:"22px 22px",marginBottom:16}}>
+                    <div style={{background:C.panel,border:`1.5px solid ${sColor}`,borderRadius:14,padding:"22px 22px",marginBottom:16}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:18}}>
-                        {/* left: the big verdict */}
+                        {/* left: the descriptive state */}
                         <div style={{flex:"1 1 260px"}}>
                           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                            <span style={{fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:C.dim}}>{asset} · {profile}</span>
+                            <span style={{fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:C.dim}}>{asset} · {profile} strategy</span>
                             <span style={{width:6,height:6,borderRadius:"50%",background:status==="live"?C.accent:C.danger}}/>
                             <span style={{fontSize:9,fontFamily:C.mono,color:C.dim}}>{status==="live"?"live":"demo"}</span>
                           </div>
-                          <div style={{fontSize:64,fontWeight:900,fontFamily:C.mono,color:vColor,lineHeight:1,letterSpacing:-1}}>
-                            {verdict}
+                          <div style={{fontSize:9.5,letterSpacing:1.5,textTransform:"uppercase",color:C.dim,marginBottom:4}}>What this strategy's rules currently show</div>
+                          <div style={{fontSize:42,fontWeight:800,fontFamily:C.mono,color:sColor,lineHeight:1.05,letterSpacing:-1}}>
+                            {state}
                           </div>
-                          <div style={{fontSize:14,color:C.text,lineHeight:1.5,marginTop:10,maxWidth:420}}>{vSub}</div>
+                          <div style={{fontSize:14,color:C.text,lineHeight:1.5,marginTop:10,maxWidth:440}}>{sSub}</div>
                           <div style={{fontSize:11,color:C.warn,marginTop:8,fontStyle:"italic"}}>
-                            What this strategy would do — not advice. It can be wrong.
+                            A description of a rule's state for learning — not a recommendation to buy or sell anything. Halyo does not tell you what to trade.
                           </div>
                         </div>
-                        {/* right: track record + price, so the verdict is never naked */}
+                        {/* right: track record + price — framed as "what studying this teaches" */}
                         <div style={{display:"flex",gap:20,flexWrap:"wrap",flex:"1 1 240px"}}>
                           <div>
-                            <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1}}>Win rate</div>
+                            <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1}}>Hit rate</div>
                             <div style={{fontSize:28,fontFamily:C.mono,fontWeight:700,color:wr>=0.5?C.accent:C.warn,lineHeight:1.1}}>{fmtPct(wr)}</div>
-                            <div style={{fontSize:9,fontFamily:C.mono,color:C.dim}}>{testBT.metrics.nTrades} trades · after costs</div>
+                            <div style={{fontSize:9,fontFamily:C.mono,color:C.dim}}>{testBT.metrics.nTrades} signals · after costs</div>
                           </div>
                           <div>
                             <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1}}>Worst dip</div>
@@ -698,16 +699,17 @@ function Funnel({ onComplete }) {
       <Shell>
         <div style={{ textAlign: "center", padding: "20px 0 8px" }}>
           <div style={{ fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>
-            Before you trade a single dollar
+            Learn crypto trading without the hype
           </div>
           <h1 style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.5, margin: "0 0 18px", maxWidth: 680, marginLeft: "auto", marginRight: "auto" }}>
-            Find the crypto strategy that fits{" "}
-            <span style={{ color: C.accent }}>how you actually handle risk.</span>
+            See how crypto strategies{" "}
+            <span style={{ color: C.accent }}>really perform — before you risk anything.</span>
           </h1>
           <p style={{ fontSize: 16, color: C.dim, lineHeight: 1.6, maxWidth: 560, margin: "0 auto 32px" }}>
-            Most people lose money trading a strategy that doesn't match their temperament.
-            Take the 2-minute risk assessment. We'll match you to assets and a strategy —
-            then show you, honestly, how it performed on real data.
+            Halyo is a learning tool and strategy reality-checker. Take the 2-minute risk
+            assessment to find where to start, then learn to read strategies and see honestly
+            how they hold up on real data — costs, drawdowns, and all. No signals to follow,
+            no promises. Just clear thinking about crypto.
           </p>
           <button onClick={() => setStage("quiz")} style={{
             background: C.accent, color: "#08120a", border: "none", borderRadius: 8,
@@ -799,9 +801,12 @@ function Funnel({ onComplete }) {
           <p style={{ fontSize: 14, lineHeight: 1.65, color: C.text, margin: 0 }}>{profile.blurb}</p>
         </div>
 
-        {/* asset matches */}
-        <div style={{ fontSize: 11, fontFamily: C.mono, color: profile.color, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>
-          Assets that match your profile
+        {/* asset matches — framed as what to STUDY, not what to buy */}
+        <div style={{ fontSize: 11, fontFamily: C.mono, color: profile.color, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>
+          Good assets to learn with at your comfort level
+        </div>
+        <div style={{ fontSize: 11, color: C.dim, marginBottom: 12, lineHeight: 1.5, maxWidth: 520 }}>
+          These aren't buy recommendations — they're the assets whose volatility best matches your stated comfort level, so the lessons and strategy behaviour are easiest to learn from.
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 22 }}>
           {profile.assets.map((a) => (
@@ -821,7 +826,7 @@ function Funnel({ onComplete }) {
         {/* matched strategy */}
         <div style={{ background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 10, padding: 18, marginBottom: 26 }}>
           <div style={{ fontSize: 11, fontFamily: C.mono, color: C.dim, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>
-            Suggested strategy style
+            Strategy style you'll learn to read
           </div>
           <div style={{ fontSize: 14, lineHeight: 1.6, color: C.text }}>{profile.strat}</div>
         </div>
