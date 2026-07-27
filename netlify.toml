@@ -1,0 +1,20 @@
+# Halyo — Netlify configuration
+# Place this file at the ROOT of your project (same level as package.json).
+
+[build]
+  command = "npm run build"
+  publish = "dist"          # Vite builds to dist/. (If you used Create React App, use "build")
+  functions = "netlify/functions"
+
+# Let the app call the license function at the clean path /api/validate-license
+[[redirects]]
+  from = "/api/validate-license"
+  to = "/.netlify/functions/validate-license"
+  status = 200
+
+# Single-page-app fallback: send all other routes to index.html so the
+# React app handles routing (prevents 404s on refresh).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

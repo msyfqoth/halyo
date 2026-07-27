@@ -638,6 +638,11 @@ function classify(total, max) {
   return "aggressive";
 }
 
+// Your Lemon Squeezy checkout link for the Halyo $39 product.
+// After payment, set the product's "after purchase" redirect (in Lemon
+// Squeezy) to send buyers to https://halyoapp.com so the license gate loads.
+const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf-67d9-4ec6-9a76-41ed05c75bdc";
+
 function Funnel({ onComplete }) {
   const [stage, setStage] = useState("hero"); // hero | quiz | result | buy
   const [qIdx, setQIdx] = useState(0);
@@ -903,12 +908,11 @@ function Funnel({ onComplete }) {
             ))}
           </div>
           <button onClick={() => {
-            // ── PRODUCTION: this is where the Lemon Squeezy checkout opens. ──
-            // Real flow: open LS checkout for the $39 product; on the LS
-            // success/redirect, call onComplete(profileKey). The license-key
-            // gate (built next) verifies payment before the app loads.
-            // For this demo we simulate a successful payment and hand off.
-            onComplete(profileKey);
+            // Opens the real Lemon Squeezy checkout for the $39 product.
+            // After payment, Lemon Squeezy emails the buyer a license key and
+            // (per your product's "after purchase" redirect setting) sends them
+            // back to the app, where the license gate unlocks it.
+            window.location.href = CHECKOUT_URL;
           }} style={{
             width: "100%", background: C.accent, color: "#08120a", border: "none",
             borderRadius: 8, padding: "14px", fontSize: 15, fontWeight: 700, cursor: "pointer",
@@ -950,12 +954,6 @@ function LicenseGate({ onUnlock }){
   const submit=async()=>{
     const k=key.trim();
     if(k.length<8){ setState("error"); setMsg("That doesn't look like a valid key."); return; }
-
-    // ⚠️ DEMO BYPASS — REMOVE BEFORE PRODUCTION ⚠️
-    // The sandbox has no serverless backend, so typing DEMO-DEMO-DEMO-DEMO
-    // unlocks the app for testing the flow. Delete this whole block when
-    // you deploy — real keys are validated by the block below it.
-    if(k==="DEMO-DEMO-DEMO-DEMO"){ onUnlock({valid:true,demo:true}); return; }
 
     setState("checking"); setMsg("");
     try{
@@ -1001,10 +999,7 @@ function LicenseGate({ onUnlock }){
         }}>{state==="checking"?"Checking…":"Unlock Halyo"}</button>
         {msg && <div style={{fontSize:12,color:C.danger,marginTop:12,lineHeight:1.5}}>{msg}</div>}
         <div style={{fontSize:11,color:C.dim,marginTop:22,lineHeight:1.6}}>
-          Your key was emailed to you after purchase. Can't find it? Check spam, or contact support.
-        </div>
-        <div style={{fontSize:10,color:C.dim,marginTop:14,fontFamily:C.mono,opacity:0.6}}>
-          demo preview: type DEMO-DEMO-DEMO-DEMO to unlock
+          Your key was emailed to you after purchase. Can't find it? Check spam, or contact <a href="mailto:support@halyoapp.com" style={{color:C.blue}}>support@halyoapp.com</a>.
         </div>
       </div>
     </div>
@@ -1015,12 +1010,18 @@ function LicenseGate({ onUnlock }){
 // ROOT: funnel (free) → payment → license gate → app.
 // ═══════════════════════════════════════════════════════════
 export default function App(){
-  const [flow,setFlow]=useState("funnel"); // funnel | gate | app
   const [chosenProfile,setChosenProfile]=useState("Balanced");
 
-  // On load, if a valid key was already saved, skip straight to the gate
-  // check (production). Sandbox has no localStorage, so this is a no-op here.
+  // On load, decide the starting screen:
+  //  - a saved valid key → straight into the app (returning customer)
+  //  - ?unlock=1 in the URL (Lemon Squeezy's post-purchase redirect) → license gate
+  //  - otherwise → the funnel (new visitor)
   const [savedKey]=useState(()=>{ try{ return window.localStorage.getItem("halyo_license"); }catch(e){ return null; } });
+  const [flow,setFlow]=useState(()=>{
+    if(savedKey) return "app";
+    try{ if(new URLSearchParams(window.location.search).get("unlock")) return "gate"; }catch(e){}
+    return "funnel";
+  });
 
   if(flow==="funnel"){
     return <Funnel onComplete={(profileKey)=>{
@@ -1031,7 +1032,6 @@ export default function App(){
         : "Balanced";
       const safe = ["Conservative","Balanced","Aggressive"].includes(norm) ? norm : "Balanced";
       setChosenProfile(safe);
-      // If they already have a saved key, skip the gate; else show it.
       setFlow(savedKey ? "app" : "gate");
     }} />;
   }
