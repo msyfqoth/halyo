@@ -114,9 +114,9 @@ function walkForward(data,cfg,folds=5){
 
 // ── strategy presets by risk profile ──
 const STRATS={
-  Conservative:{fast:20,slow:50,useRsi:true,default:"BTC/USD",note:"Slow crossovers, fewer trades, longer trends."},
-  Balanced:{fast:10,slow:30,useRsi:true,default:"ETH/USD",note:"Balanced signals with RSI confirmation."},
-  Aggressive:{fast:5,slow:20,useRsi:false,default:"SOL/USD",note:"Fast crossovers, more trades, more noise."},
+  Conservative:{fast:20,slow:50,useRsi:true,defaultAsset:"BTC/USD",note:"Slow crossovers, fewer trades, longer trends."},
+  Balanced:{fast:10,slow:30,useRsi:true,defaultAsset:"ETH/USD",note:"Balanced signals with RSI confirmation."},
+  Aggressive:{fast:5,slow:20,useRsi:false,defaultAsset:"SOL/USD",note:"Fast crossovers, more trades, more noise."},
 };
 
 // ── lessons ──
@@ -136,13 +136,13 @@ function TradeApp({ initialProfile = "Balanced" }){
   const [tutStep,setTutStep]=useState(0);
   const [openLesson,setOpenLesson]=useState(null);
 
-  const preset=STRATS[profile];
-  const [asset,setAsset]=useState(preset.default);
+  const preset=STRATS[profile]||STRATS["Balanced"];
+  const [asset,setAsset]=useState(preset.defaultAsset);
   const [seriesCache,setSeriesCache]=useState({});
   const [status,setStatus]=useState("idle");
 
   // when profile changes, snap asset to its default
-  useEffect(()=>{setAsset(STRATS[profile].default);},[profile]);
+  useEffect(()=>{setAsset((STRATS[profile]||STRATS["Balanced"]).defaultAsset);},[profile]);
 
   const fetchData=useCallback(async(a)=>{
     setStatus("loading");
@@ -1005,7 +1005,13 @@ export default function App(){
 
   if(flow==="funnel"){
     return <Funnel onComplete={(profileKey)=>{
-      setChosenProfile(profileKey);
+      // classify() returns lowercase ("balanced"); STRATS keys are capitalized
+      // ("Balanced"). Normalize so STRATS[profile] always resolves.
+      const norm = typeof profileKey==="string" && profileKey.length
+        ? profileKey.charAt(0).toUpperCase()+profileKey.slice(1).toLowerCase()
+        : "Balanced";
+      const safe = ["Conservative","Balanced","Aggressive"].includes(norm) ? norm : "Balanced";
+      setChosenProfile(safe);
       // If they already have a saved key, skip the gate; else show it.
       setFlow(savedKey ? "app" : "gate");
     }} />;
