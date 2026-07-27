@@ -473,6 +473,13 @@ function TradeApp({ initialProfile = "Balanced" }){
 
                 <div style={{fontSize:10,color:C.dim,textAlign:"center",marginTop:16,fontFamily:C.mono,lineHeight:1.6}}>
                   {isLive?`Live daily closes from ${entry?.src||"exchange"} (1yr).`:"Both live sources busy — demo data shown."} Crypto only · no broker execution.
+                  <div style={{marginTop:8}}>
+                    <a href="/risk-disclaimer.html" target="_blank" rel="noopener" style={{color:C.dim,textDecoration:"underline"}}>Risk Disclaimer</a>
+                    <span style={{margin:"0 6px"}}>·</span>
+                    <a href="/terms.html" target="_blank" rel="noopener" style={{color:C.dim,textDecoration:"underline"}}>Terms</a>
+                    <span style={{margin:"0 6px"}}>·</span>
+                    <a href="/privacy.html" target="_blank" rel="noopener" style={{color:C.dim,textDecoration:"underline"}}>Privacy</a>
+                  </div>
                 </div>
               </>
             )}
@@ -658,6 +665,13 @@ function Funnel({ onComplete }) {
       preference, not a recommendation to buy. Crypto is volatile and you can lose money.
       Win rates shown in the app are measured on historical data, after costs — past results
       never guarantee future outcomes. You make every decision.
+      <div style={{ marginTop: 10 }}>
+        <a href="/risk-disclaimer.html" target="_blank" rel="noopener" style={{ color: C.blue, textDecoration: "none" }}>Risk Disclaimer</a>
+        <span style={{ margin: "0 6px", color: C.line }}>·</span>
+        <a href="/terms.html" target="_blank" rel="noopener" style={{ color: C.blue, textDecoration: "none" }}>Terms</a>
+        <span style={{ margin: "0 6px", color: C.line }}>·</span>
+        <a href="/privacy.html" target="_blank" rel="noopener" style={{ color: C.blue, textDecoration: "none" }}>Privacy</a>
+      </div>
     </div>
   );
 
