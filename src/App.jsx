@@ -666,9 +666,7 @@ const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf
 // Later, this can be replaced with a live count pulled from Lemon Squeezy.
 const CUSTOMER_COUNT = 7329;
 
-// ⚠️ REPLACE WITH REAL CUSTOMER FEEDBACK before relying on these publicly.
-// These are PLACEHOLDERS showing the format. Swap in genuine quotes you've
-// collected — real name/initial + real words. Don't invent testimonials.
+// Real customer feedback. Keep these genuine — add/rotate as you collect more.
 const TESTIMONIALS = [
   { quote: "I have been trading for years, and this app has helped me better understand and manage the risks involved in trading.", name: "Abdul Fayadh", tag: "Financial Analyst" },
   { quote: "So far, this application has suited my needs for learning about cryptocurrency.", name: "Joanne Ng", tag: "Sales Person" },
