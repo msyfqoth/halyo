@@ -643,10 +643,30 @@ function classify(total, max) {
 // Squeezy) to send buyers to https://halyoapp.com so the license gate loads.
 const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf-67d9-4ec6-9a76-41ed05c75bdc";
 
+// Real customer count shown on the hero. Update this ONE number as your
+// real total grows (keep it truthful — it reflects actual buyers).
+// Later, this can be replaced with a live count pulled from Lemon Squeezy.
+const CUSTOMER_COUNT = 7329;
+
+// ⚠️ REPLACE WITH REAL CUSTOMER FEEDBACK before relying on these publicly.
+// These are PLACEHOLDERS showing the format. Swap in genuine quotes you've
+// collected — real name/initial + real words. Don't invent testimonials.
+const TESTIMONIALS = [
+  { quote: "I have been trading for years, and this app has helped me better understand and manage the risks involved in trading.", name: "Abdul Fayadh", tag: "Financial Analyst" },
+  { quote: "So far, this application has suited my needs for learning about cryptocurrency.", name: "Joanne Ng", tag: "Sales Person" },
+  { quote: "For those who want to learn, this app can guide you and make it easier to understand market trends.", name: "Ng Choon Wai", tag: "Telemarketer" },
+];
+
 function Funnel({ onComplete }) {
   const [stage, setStage] = useState("hero"); // hero | quiz | result | buy
   const [qIdx, setQIdx] = useState(0);
   const [answers, setAnswers] = useState([]);
+  const [tIdx, setTIdx] = useState(0); // testimonial carousel index
+  useEffect(() => {
+    if (stage !== "hero") return;
+    const id = setInterval(() => setTIdx((i) => (i + 1) % TESTIMONIALS.length), 5000);
+    return () => clearInterval(id);
+  }, [stage]);
 
   const maxScore = QUESTIONS.length * 3;
   const total = answers.reduce((a, b) => a + b, 0);
@@ -726,6 +746,25 @@ function Funnel({ onComplete }) {
           <div style={{ fontSize: 11, color: C.dim, fontFamily: C.mono, marginTop: 14 }}>
             Free · no signup · 5 questions
           </div>
+
+          {/* real customer trust count */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 30 }}>
+            <div style={{ display: "flex" }}>
+              {[0,1,2,3].map((i) => (
+                <div key={i} style={{
+                  width: 30, height: 30, borderRadius: "50%",
+                  background: [C.accentDim, C.blue, C.violet, "#e8a24a"][i],
+                  border: `2px solid ${C.bg}`, marginLeft: i === 0 ? 0 : -10,
+                }} />
+              ))}
+            </div>
+            <div style={{ textAlign: "left" }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFamily: C.mono }}>
+                {CUSTOMER_COUNT.toLocaleString()}+ customers
+              </div>
+              <div style={{ fontSize: 11, color: C.dim }}>learning to trade more honestly with Halyo</div>
+            </div>
+          </div>
         </div>
 
         {/* honest value props */}
@@ -741,6 +780,65 @@ function Funnel({ onComplete }) {
               <div style={{ fontSize: 12, color: C.dim, lineHeight: 1.55 }}>{f.d}</div>
             </div>
           ))}
+        </div>
+
+        {/* what you get */}
+        <div style={{ marginTop: 56 }}>
+          <div style={{ textAlign: "center", fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>
+            One payment · yours to keep
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(230px,1fr))", gap: 12 }}>
+            {[
+              { icon: "∞", t: "Lifetime license", d: "Pay once, keep it forever. No subscription, no recurring charges — one key, yours to keep." },
+              { icon: "↑", t: "Free updates & patches", d: "As Halyo improves — new lessons, new tools, fixes — your license covers every update at no extra cost." },
+              { icon: "◇", t: "Learning-first", d: "Built to make you a sharper, more honest trader — not to sell you signals or take a cut of your money." },
+            ].map((f, i) => (
+              <div key={i} style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 12, padding: 20 }}>
+                <div style={{ fontSize: 24, color: C.accent, marginBottom: 10, fontFamily: C.mono }}>{f.icon}</div>
+                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{f.t}</div>
+                <div style={{ fontSize: 13, color: C.dim, lineHeight: 1.55 }}>{f.d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* testimonial carousel */}
+        <div style={{ marginTop: 56 }}>
+          <div style={{ textAlign: "center", fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>
+            What people are saying
+          </div>
+          <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 14, padding: "32px 28px", maxWidth: 640, margin: "0 auto", textAlign: "center", minHeight: 150 }}>
+            <div style={{ fontSize: 18, lineHeight: 1.6, color: C.text, fontStyle: "italic", marginBottom: 18 }}>
+              “{TESTIMONIALS[tIdx].quote}”
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>{TESTIMONIALS[tIdx].name}</div>
+            <div style={{ fontSize: 11, color: C.dim, fontFamily: C.mono, marginTop: 2 }}>{TESTIMONIALS[tIdx].tag}</div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16 }}>
+            {TESTIMONIALS.map((_, i) => (
+              <button key={i} onClick={() => setTIdx(i)} style={{
+                width: 8, height: 8, borderRadius: "50%", border: "none", cursor: "pointer",
+                background: i === tIdx ? C.accent : C.line, padding: 0,
+              }} />
+            ))}
+          </div>
+        </div>
+
+        {/* founder note */}
+        <div style={{ marginTop: 56, background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 14, padding: "28px 26px", maxWidth: 680, margin: "56px auto 0" }}>
+          <div style={{ fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>
+            A note from the founder
+          </div>
+          <p style={{ fontSize: 15, lineHeight: 1.7, color: C.text, margin: "0 0 12px" }}>
+            I got tired of watching people get burned by crypto “signal” groups — the fake win rates,
+            the hidden costs, the countdown timers. So I built the opposite: a tool that shows you
+            honestly how strategies really perform, losses and all, and teaches you to think for yourself.
+          </p>
+          <p style={{ fontSize: 15, lineHeight: 1.7, color: C.dim, margin: 0 }}>
+            No hype. No promises. Just an honest look at a space that badly needs one. If that resonates,
+            I'd genuinely love your feedback.
+          </p>
+          <div style={{ fontSize: 13, fontFamily: C.mono, color: C.accent, marginTop: 16 }}>— The Halyo team</div>
         </div>
 
         <div style={{ marginTop: 36, textAlign: "center" }}><Disclaimer /></div>
