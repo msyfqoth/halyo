@@ -480,6 +480,8 @@ function TradeApp({ initialProfile = "Balanced" }){
                     <a href="/terms.html" target="_blank" rel="noopener" style={{color:C.dim,textDecoration:"underline"}}>Terms</a>
                     <span style={{margin:"0 6px"}}>·</span>
                     <a href="/privacy.html" target="_blank" rel="noopener" style={{color:C.dim,textDecoration:"underline"}}>Privacy</a>
+                    <span style={{margin:"0 6px"}}>·</span>
+                    <a href="mailto:support@halyoapp.com" style={{color:C.dim,textDecoration:"underline"}}>Support</a>
                   </div>
                 </div>
               </>
@@ -855,6 +857,25 @@ function Funnel({ onComplete }) {
             I'd genuinely love your feedback.
           </p>
           <div style={{ fontSize: 13, fontFamily: C.mono, color: C.accent, marginTop: 16 }}>— The Halyo team</div>
+        </div>
+
+        {/* contact / support */}
+        <div style={{ marginTop: 56, textAlign: "center" }}>
+          <div style={{ fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>
+            Questions? We're here
+          </div>
+          <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 14, padding: "26px 24px", maxWidth: 520, margin: "0 auto" }}>
+            <p style={{ fontSize: 14, color: C.dim, lineHeight: 1.6, margin: "0 0 16px" }}>
+              Before or after you buy, reach a real person. We usually reply within a day.
+            </p>
+            <a href="/contact.html" style={{
+              display: "inline-block", background: C.accent, color: "#08120a", textDecoration: "none",
+              borderRadius: 8, padding: "12px 26px", fontSize: 15, fontWeight: 700,
+            }}>Contact us</a>
+            <div style={{ fontSize: 11, color: C.dim, fontFamily: C.mono, marginTop: 14 }}>
+              Lost your key · refund requests · anything else · or email support@halyoapp.com
+            </div>
+          </div>
         </div>
 
         <div style={{ marginTop: 36, textAlign: "center" }}><Disclaimer /></div>
