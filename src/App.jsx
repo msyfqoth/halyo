@@ -638,6 +638,24 @@ function classify(total, max) {
   return "aggressive";
 }
 
+// ── Conversion tracking helper ──
+// Fires events to whatever ad pixels are loaded on the page (Meta, TikTok,
+// Google). Safe no-op if a pixel isn't installed. Add the pixel <script>
+// tags in index.html; this function routes events to them.
+function track(event, data = {}) {
+  try {
+    if (typeof window === "undefined") return;
+    // Meta Pixel
+    if (window.fbq) window.fbq("track", event, data);
+    // TikTok Pixel
+    if (window.ttq) window.ttq.track(event, data);
+    // Google (gtag) — map to a generic event
+    if (window.gtag) window.gtag("event", event, data);
+    // Always leave a console breadcrumb so you can verify in testing
+    if (window.console) console.log("[track]", event, data);
+  } catch (e) {}
+}
+
 // Your Lemon Squeezy checkout link for the Halyo $39 product.
 // After payment, set the product's "after purchase" redirect (in Lemon
 // Squeezy) to send buyers to https://halyoapp.com so the license gate loads.
@@ -736,7 +754,7 @@ function Funnel({ onComplete }) {
             how they hold up on real data — costs, drawdowns, and all. No signals to follow,
             no promises. Just clear thinking about crypto.
           </p>
-          <button onClick={() => setStage("quiz")} style={{
+          <button onClick={() => { track("StartQuiz"); setStage("quiz"); }} style={{
             background: C.accent, color: "#08120a", border: "none", borderRadius: 8,
             padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer",
             fontFamily: C.sans, letterSpacing: 0.2,
@@ -1010,6 +1028,7 @@ function Funnel({ onComplete }) {
             // After payment, Lemon Squeezy emails the buyer a license key and
             // (per your product's "after purchase" redirect setting) sends them
             // back to the app, where the license gate unlocks it.
+            track("InitiateCheckout", { value: 39, currency: "USD" });
             window.location.href = CHECKOUT_URL;
           }} style={{
             width: "100%", background: C.accent, color: "#08120a", border: "none",
@@ -1065,7 +1084,12 @@ function LicenseGate({ onUnlock }){
         // PRODUCTION: persist so they don't re-enter every visit.
         // localStorage isn't available in this sandbox preview, so we
         // guard it; on your real domain this line remembers the unlock.
-        try{ window.localStorage.setItem("halyo_license", k); }catch(e){}
+        try{
+          const already = window.localStorage.getItem("halyo_license");
+          window.localStorage.setItem("halyo_license", k);
+          // Fire Purchase only the first time this key unlocks (not on repeat visits)
+          if(!already) track("Purchase", { value: 39, currency: "USD" });
+        }catch(e){ track("Purchase", { value: 39, currency: "USD" }); }
         onUnlock(data);
       }else{
         setState("error"); setMsg(data.error||"Invalid or inactive license.");
