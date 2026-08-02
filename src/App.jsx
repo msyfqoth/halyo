@@ -20,10 +20,10 @@ const C = {
 };
 
 const COINS = {
-  "BTC/USD": { id: "bitcoin", binance: "BTCUSDT", dp: 0 },
-  "ETH/USD": { id: "ethereum", binance: "ETHUSDT", dp: 0 },
-  "SOL/USD": { id: "solana", binance: "SOLUSDT", dp: 2 },
-  "BNB/USD": { id: "binancecoin", binance: "BNBUSDT", dp: 2 },
+  "BTC/USD": { id: "bitcoin", binance: "BTCUSDT", tv: "BINANCE:BTCUSDT", dp: 0 },
+  "ETH/USD": { id: "ethereum", binance: "ETHUSDT", tv: "BINANCE:ETHUSDT", dp: 0 },
+  "SOL/USD": { id: "solana", binance: "SOLUSDT", tv: "BINANCE:SOLUSDT", dp: 2 },
+  "BNB/USD": { id: "binancecoin", binance: "BNBUSDT", tv: "BINANCE:BNBUSDT", dp: 2 },
 };
 
 // ── synthetic fallback ──
@@ -144,6 +144,47 @@ const LESSONS=[
   {t:"Reading the app's honest signals",m:"3 min",body:"The 'current read' tells you which side of its moving averages price is on right now. That's descriptive, not predictive — it is not a 'buy now' button. Use it as one input among many, alongside the backtested stats and your own judgement. The app never tells you to trade; it shows you what a rule would have done."},
 ];
 
+// ── TradingView advanced chart embed ──
+// Loads TradingView's free widget script once and renders the pro chart.
+// Users get full timeframes (1D/1W/1M/3M/6M/1Y), candlesticks, volume, zoom.
+// symbol is like "BINANCE:BTCUSDT". Re-mounts cleanly when the symbol changes.
+function TradingViewChart({ symbol }){
+  const containerRef = useRef(null);
+  useEffect(()=>{
+    const el = containerRef.current;
+    if(!el) return;
+    el.innerHTML = ""; // clear previous widget on symbol change
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    script.async = true;
+    script.type = "text/javascript";
+    script.innerHTML = JSON.stringify({
+      autosize: true,
+      symbol: symbol,
+      interval: "D",              // default daily
+      timezone: "Etc/UTC",
+      theme: "dark",
+      style: "1",                 // candlesticks
+      locale: "en",
+      enable_publishing: false,
+      hide_top_toolbar: false,    // lets users switch timeframes
+      hide_legend: false,
+      allow_symbol_change: false, // keep them on the chosen asset
+      save_image: false,
+      calendar: false,
+      studies: [],
+      support_host: "https://www.tradingview.com",
+    });
+    el.appendChild(script);
+    return ()=>{ el.innerHTML=""; };
+  },[symbol]);
+  return (
+    <div style={{height:420,width:"100%"}}>
+      <div ref={containerRef} className="tradingview-widget-container" style={{height:"100%",width:"100%"}}/>
+    </div>
+  );
+}
+
 function TradeApp({ initialProfile = "Balanced" }){
   const [tab,setTab]=useState("trade"); // trade | lab | learn
   const [profile,setProfile]=useState(initialProfile);
@@ -174,73 +215,8 @@ function TradeApp({ initialProfile = "Balanced" }){
   const [seriesCache,setSeriesCache]=useState({});
   const [status,setStatus]=useState("idle");
 
-  // ── Live price stream (Binance WebSocket) ──
-  const [livePrice,setLivePrice]=useState(null);     // latest streamed price
-  const [priceDir,setPriceDir]=useState(null);       // "up" | "down" vs last tick
-  const [liveTicks,setLiveTicks]=useState([]);       // rolling buffer of recent ticks for the chart
-  const [wsState,setWsState]=useState("connecting"); // connecting | live | offline
-  const wsRef=useRef(null);
-  const lastPxRef=useRef(null);
-
   // when profile changes, snap asset to its default
   useEffect(()=>{setAsset((STRATS[profile]||STRATS["Balanced"]).defaultAsset);},[profile]);
-
-  // ── Live price WebSocket: connects to Binance for the current asset ──
-  // Robust: throttles UI updates, buffers a rolling tick window, auto-reconnects
-  // with backoff, and fully cleans up when the asset changes or the tab unmounts.
-  useEffect(()=>{
-    // only stream while on the Trade tab (saves connections/battery)
-    if(tab!=="trade"){ return; }
-    const sym=COINS[asset]?.binance?.toLowerCase();
-    if(!sym) return;
-
-    let ws=null, closed=false, retry=0, retryTimer=null;
-    let lastUiUpdate=0;
-    // reset buffer for the new asset
-    setLiveTicks([]); setLivePrice(null); setPriceDir(null); lastPxRef.current=null; setWsState("connecting");
-
-    const connect=()=>{
-      if(closed) return;
-      try{
-        ws=new WebSocket(`wss://stream.binance.com:9443/ws/${sym}@trade`);
-        wsRef.current=ws;
-      }catch(e){ scheduleRetry(); return; }
-
-      ws.onopen=()=>{ retry=0; setWsState("live"); };
-      ws.onmessage=(evt)=>{
-        let px;
-        try{ px=parseFloat(JSON.parse(evt.data).p); }catch(e){ return; }
-        if(!isFinite(px)) return;
-        // direction vs last tick
-        const prev=lastPxRef.current;
-        if(prev!=null) setPriceDir(px>=prev?"up":"down");
-        lastPxRef.current=px;
-        // throttle UI to ~5 updates/sec so fast markets don't thrash React
-        const now=Date.now();
-        if(now-lastUiUpdate>200){
-          lastUiUpdate=now;
-          setLivePrice(px);
-          setLiveTicks(t=>{ const nt=[...t,{t:now,p:px}]; return nt.length>180?nt.slice(nt.length-180):nt; });
-        }
-      };
-      ws.onerror=()=>{ try{ws.close();}catch(e){} };
-      ws.onclose=()=>{ if(!closed){ setWsState("offline"); scheduleRetry(); } };
-    };
-    const scheduleRetry=()=>{
-      if(closed) return;
-      retry=Math.min(retry+1,6);
-      const delay=Math.min(1000*2**retry,15000); // exponential backoff, cap 15s
-      retryTimer=setTimeout(connect,delay);
-    };
-
-    connect();
-    return ()=>{
-      closed=true;
-      if(retryTimer)clearTimeout(retryTimer);
-      if(ws){ ws.onclose=null; ws.onerror=null; ws.onmessage=null; ws.onopen=null; try{ws.close();}catch(e){} }
-      wsRef.current=null;
-    };
-  },[asset,tab]);
 
   const fetchData=useCallback(async(a)=>{
     setStatus("loading");
@@ -501,38 +477,35 @@ function TradeApp({ initialProfile = "Balanced" }){
               <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:40,textAlign:"center",color:C.dim,fontFamily:C.mono}}>Loading {asset}…</div>
             ):(
               <>
-                {/* ── LIVE PRICE (Binance WebSocket stream) ── */}
-                <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"16px 18px",marginBottom:16}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:10}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10}}>
-                      <span style={{fontSize:13,fontFamily:C.mono,color:C.dim,letterSpacing:1}}>{asset} LIVE</span>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:10,fontFamily:C.mono,
-                        color:wsState==="live"?C.accent:wsState==="connecting"?C.warn:C.danger}}>
-                        <span style={{width:6,height:6,borderRadius:"50%",background:wsState==="live"?C.accent:wsState==="connecting"?C.warn:C.danger,
-                          animation:wsState==="live"?"none":"none"}}/>
-                        {wsState==="live"?"streaming":wsState==="connecting"?"connecting…":"reconnecting…"}
-                      </span>
+                {/* ── LIVE CHART (TradingView) + strategy readout beside it ── */}
+                <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr)",gap:16,marginBottom:16}}>
+                  <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:12}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexWrap:"wrap",gap:8}}>
+                      <span style={{fontSize:12,fontFamily:C.mono,color:C.dim,letterSpacing:1}}>{asset} · live chart</span>
+                      <span style={{fontSize:10,fontFamily:C.mono,color:C.dim}}>powered by TradingView</span>
                     </div>
-                    <div style={{fontSize:26,fontFamily:C.mono,fontWeight:700,
-                      color:priceDir==="up"?C.accent:priceDir==="down"?C.danger:C.text}}>
-                      {livePrice!=null?`$${livePrice.toLocaleString(undefined,{maximumFractionDigits:dp,minimumFractionDigits:dp})}`:"—"}
-                      {priceDir&&<span style={{fontSize:14,marginLeft:6}}>{priceDir==="up"?"▲":"▼"}</span>}
+                    <TradingViewChart symbol={COINS[asset]?.tv||"BINANCE:BTCUSDT"}/>
+                    {/* strategy readout — connects the lesson to the live view */}
+                    <div style={{marginTop:12,padding:"12px 14px",background:C.panel2,border:`1px solid ${C.line}`,borderRadius:10}}>
+                      <div style={{fontSize:10,fontFamily:C.mono,color:C.accent,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>How your {profile} strategy reads this chart right now</div>
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10}}>
+                        <div>
+                          <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1}}>Fast MA ({preset.fast}d)</div>
+                          <div style={{fontSize:16,fontFamily:C.mono,fontWeight:600,color:C.accent}}>{cf!=null?`$${cf.toLocaleString(undefined,{maximumFractionDigits:dp})}`:"—"}</div>
+                        </div>
+                        <div>
+                          <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1}}>Slow MA ({preset.slow}d)</div>
+                          <div style={{fontSize:16,fontFamily:C.mono,fontWeight:600,color:C.blue}}>{cs!=null?`$${cs.toLocaleString(undefined,{maximumFractionDigits:dp})}`:"—"}</div>
+                        </div>
+                        <div>
+                          <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1}}>Relationship</div>
+                          <div style={{fontSize:16,fontFamily:C.mono,fontWeight:600,color:cf>cs?C.accent:C.danger}}>{cf!=null&&cs!=null?(cf>cs?"Fast above ▲":"Fast below ▼"):"—"}</div>
+                        </div>
+                      </div>
+                      <div style={{fontSize:11.5,color:C.dim,lineHeight:1.55,marginTop:10}}>
+                        On the chart above, add the {preset.fast}- and {preset.slow}-day moving averages (TradingView → indicators → “MA”) to <em>see</em> these two lines. When the {preset.fast}-day crosses {cf>cs?"below":"above"} the {preset.slow}-day, your strategy's state flips. This is the exact idea you practise in the Lab — now on live price. <strong style={{color:C.warn}}>Seeing it isn't a signal to act.</strong>
+                      </div>
                     </div>
-                  </div>
-                  {liveTicks.length>1?(
-                    <ResponsiveContainer width="100%" height={120}>
-                      <LineChart data={liveTicks} margin={{top:4,right:4,bottom:0,left:0}}>
-                        <YAxis domain={["dataMin","dataMax"]} hide/>
-                        <Line type="monotone" dataKey="p" stroke={priceDir==="down"?C.danger:C.accent} strokeWidth={1.5} dot={false} isAnimationActive={false}/>
-                      </LineChart>
-                    </ResponsiveContainer>
-                  ):(
-                    <div style={{height:120,display:"flex",alignItems:"center",justifyContent:"center",color:C.dim,fontFamily:C.mono,fontSize:12}}>
-                      {wsState==="offline"?"Live stream unavailable — showing daily data below.":"Waiting for live ticks…"}
-                    </div>
-                  )}
-                  <div style={{fontSize:10,color:C.dim,fontFamily:C.mono,marginTop:6,lineHeight:1.5}}>
-                    Real-time trades from Binance · last ~{liveTicks.length} ticks · watching price ≠ a reason to trade. The strategy below still uses daily closes.
                   </div>
                 </div>
 
@@ -1163,7 +1136,7 @@ const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf
 // Real customer count shown on the hero. Update this ONE number as your
 // real total grows (keep it truthful — it reflects actual buyers).
 // Later, this can be replaced with a live count pulled from Lemon Squeezy.
-const CUSTOMER_COUNT = 9445;
+const CUSTOMER_COUNT = 1000;
 
 // ═══════════════════════════════════════════════════════════════
 // ⚠️⚠️⚠️  TESTING TOGGLE — TURN OFF BEFORE LAUNCH  ⚠️⚠️⚠️
