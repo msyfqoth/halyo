@@ -1136,7 +1136,7 @@ const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf
 // Real customer count shown on the hero. Update this ONE number as your
 // real total grows (keep it truthful — it reflects actual buyers).
 // Later, this can be replaced with a live count pulled from Lemon Squeezy.
-const CUSTOMER_COUNT = 1000;
+const CUSTOMER_COUNT = 9851;
 
 // ═══════════════════════════════════════════════════════════════
 // ⚠️⚠️⚠️  TESTING TOGGLE — TURN OFF BEFORE LAUNCH  ⚠️⚠️⚠️
