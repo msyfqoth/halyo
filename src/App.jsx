@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ReferenceLine, Area, AreaChart,
@@ -174,8 +174,73 @@ function TradeApp({ initialProfile = "Balanced" }){
   const [seriesCache,setSeriesCache]=useState({});
   const [status,setStatus]=useState("idle");
 
+  // ── Live price stream (Binance WebSocket) ──
+  const [livePrice,setLivePrice]=useState(null);     // latest streamed price
+  const [priceDir,setPriceDir]=useState(null);       // "up" | "down" vs last tick
+  const [liveTicks,setLiveTicks]=useState([]);       // rolling buffer of recent ticks for the chart
+  const [wsState,setWsState]=useState("connecting"); // connecting | live | offline
+  const wsRef=useRef(null);
+  const lastPxRef=useRef(null);
+
   // when profile changes, snap asset to its default
   useEffect(()=>{setAsset((STRATS[profile]||STRATS["Balanced"]).defaultAsset);},[profile]);
+
+  // ── Live price WebSocket: connects to Binance for the current asset ──
+  // Robust: throttles UI updates, buffers a rolling tick window, auto-reconnects
+  // with backoff, and fully cleans up when the asset changes or the tab unmounts.
+  useEffect(()=>{
+    // only stream while on the Trade tab (saves connections/battery)
+    if(tab!=="trade"){ return; }
+    const sym=COINS[asset]?.binance?.toLowerCase();
+    if(!sym) return;
+
+    let ws=null, closed=false, retry=0, retryTimer=null;
+    let lastUiUpdate=0;
+    // reset buffer for the new asset
+    setLiveTicks([]); setLivePrice(null); setPriceDir(null); lastPxRef.current=null; setWsState("connecting");
+
+    const connect=()=>{
+      if(closed) return;
+      try{
+        ws=new WebSocket(`wss://stream.binance.com:9443/ws/${sym}@trade`);
+        wsRef.current=ws;
+      }catch(e){ scheduleRetry(); return; }
+
+      ws.onopen=()=>{ retry=0; setWsState("live"); };
+      ws.onmessage=(evt)=>{
+        let px;
+        try{ px=parseFloat(JSON.parse(evt.data).p); }catch(e){ return; }
+        if(!isFinite(px)) return;
+        // direction vs last tick
+        const prev=lastPxRef.current;
+        if(prev!=null) setPriceDir(px>=prev?"up":"down");
+        lastPxRef.current=px;
+        // throttle UI to ~5 updates/sec so fast markets don't thrash React
+        const now=Date.now();
+        if(now-lastUiUpdate>200){
+          lastUiUpdate=now;
+          setLivePrice(px);
+          setLiveTicks(t=>{ const nt=[...t,{t:now,p:px}]; return nt.length>180?nt.slice(nt.length-180):nt; });
+        }
+      };
+      ws.onerror=()=>{ try{ws.close();}catch(e){} };
+      ws.onclose=()=>{ if(!closed){ setWsState("offline"); scheduleRetry(); } };
+    };
+    const scheduleRetry=()=>{
+      if(closed) return;
+      retry=Math.min(retry+1,6);
+      const delay=Math.min(1000*2**retry,15000); // exponential backoff, cap 15s
+      retryTimer=setTimeout(connect,delay);
+    };
+
+    connect();
+    return ()=>{
+      closed=true;
+      if(retryTimer)clearTimeout(retryTimer);
+      if(ws){ ws.onclose=null; ws.onerror=null; ws.onmessage=null; ws.onopen=null; try{ws.close();}catch(e){} }
+      wsRef.current=null;
+    };
+  },[asset,tab]);
 
   const fetchData=useCallback(async(a)=>{
     setStatus("loading");
@@ -326,33 +391,38 @@ function TradeApp({ initialProfile = "Balanced" }){
 
   // ── Candle: draws a single candlestick as SVG ──
   // props: o,h,l,c (open,high,low,close) on a 0–100 scale; w=width; label=show anatomy labels
-  const Candle=({o,h,l,c,w=120,ht=240,label=false,showLabels=[]})=>{
-    const pad=label?90:14;
+  const Candle=({o,h,l,c,w=120,ht=240,label=false})=>{
+    // when labelled, reserve generous room: left gutter for UP/DOWN, right for callouts
+    const leftPad=label?54:14;
     const hi=Math.max(o,h,l,c),lo=Math.min(o,h,l,c);
     const range=(hi-lo)||1;
-    const y=(v)=>ht-14-((v-lo)/range)*(ht-28);
+    const y=(v)=>ht-16-((v-lo)/range)*(ht-32);
     const up=c>=o;
     const col=up?C.accent:C.danger;
-    const cx=pad+ (w-pad)/2;
-    const bw=Math.min(38,(w-pad)*0.55);
+    const cx=leftPad+22;                 // candle sits just right of the left gutter
+    const bw=26;
     const bodyTop=y(Math.max(o,c)), bodyBot=y(Math.min(o,c));
+    const lineEnd=cx+bw/2+34;            // where the callout leader lines end
+    const textX=lineEnd+6;
     return (
-      <svg width={w} height={ht} style={{overflow:"visible"}}>
+      <svg width={w} height={ht} style={{maxWidth:"100%"}}>
         {/* wick */}
         <line x1={cx} y1={y(h)} x2={cx} y2={y(l)} stroke={col} strokeWidth={2}/>
         {/* body */}
         <rect x={cx-bw/2} y={bodyTop} width={bw} height={Math.max(2,bodyBot-bodyTop)} fill={col} rx={2}/>
         {label && (
-          <g fontFamily={C.mono} fontSize={10} fill={C.dim}>
-            <line x1={cx+bw/2+6} y1={y(h)} x2={cx+bw/2+40} y2={y(h)} stroke={C.line}/>
-            <text x={cx+bw/2+44} y={y(h)+3} fill={C.text}>High (wick top)</text>
-            <line x1={cx+bw/2+6} y1={bodyTop} x2={cx+bw/2+40} y2={bodyTop} stroke={C.line}/>
-            <text x={cx+bw/2+44} y={bodyTop+3}>{up?"Close":"Open"} (body top)</text>
-            <line x1={cx+bw/2+6} y1={bodyBot} x2={cx+bw/2+40} y2={bodyBot} stroke={C.line}/>
-            <text x={cx+bw/2+44} y={bodyBot+3}>{up?"Open":"Close"} (body bottom)</text>
-            <line x1={cx+bw/2+6} y1={y(l)} x2={cx+bw/2+40} y2={y(l)} stroke={C.line}/>
-            <text x={cx+bw/2+44} y={y(l)+3} fill={C.text}>Low (wick bottom)</text>
-            <text x={pad-8} y={(bodyTop+bodyBot)/2+3} textAnchor="end" fill={col} fontWeight="700">{up?"UP":"DOWN"}</text>
+          <g fontFamily={C.mono} fontSize={9.5} fill={C.dim}>
+            {/* UP/DOWN badge in the left gutter */}
+            <text x={6} y={(bodyTop+bodyBot)/2+3} fill={col} fontWeight="700" fontSize={11}>{up?"UP":"DOWN"}</text>
+            {/* right-side callouts */}
+            <line x1={cx+bw/2+4} y1={y(h)} x2={lineEnd} y2={y(h)} stroke={C.line}/>
+            <text x={textX} y={y(h)+3} fill={C.text}>High</text>
+            <line x1={cx+bw/2+4} y1={bodyTop} x2={lineEnd} y2={bodyTop} stroke={C.line}/>
+            <text x={textX} y={bodyTop+3}>{up?"Close":"Open"}</text>
+            <line x1={cx+bw/2+4} y1={bodyBot} x2={lineEnd} y2={bodyBot} stroke={C.line}/>
+            <text x={textX} y={bodyBot+3}>{up?"Open":"Close"}</text>
+            <line x1={cx+bw/2+4} y1={y(l)} x2={lineEnd} y2={y(l)} stroke={C.line}/>
+            <text x={textX} y={y(l)+3} fill={C.text}>Low</text>
           </g>
         )}
       </svg>
@@ -431,6 +501,41 @@ function TradeApp({ initialProfile = "Balanced" }){
               <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:40,textAlign:"center",color:C.dim,fontFamily:C.mono}}>Loading {asset}…</div>
             ):(
               <>
+                {/* ── LIVE PRICE (Binance WebSocket stream) ── */}
+                <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"16px 18px",marginBottom:16}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:10}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <span style={{fontSize:13,fontFamily:C.mono,color:C.dim,letterSpacing:1}}>{asset} LIVE</span>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:10,fontFamily:C.mono,
+                        color:wsState==="live"?C.accent:wsState==="connecting"?C.warn:C.danger}}>
+                        <span style={{width:6,height:6,borderRadius:"50%",background:wsState==="live"?C.accent:wsState==="connecting"?C.warn:C.danger,
+                          animation:wsState==="live"?"none":"none"}}/>
+                        {wsState==="live"?"streaming":wsState==="connecting"?"connecting…":"reconnecting…"}
+                      </span>
+                    </div>
+                    <div style={{fontSize:26,fontFamily:C.mono,fontWeight:700,
+                      color:priceDir==="up"?C.accent:priceDir==="down"?C.danger:C.text}}>
+                      {livePrice!=null?`$${livePrice.toLocaleString(undefined,{maximumFractionDigits:dp,minimumFractionDigits:dp})}`:"—"}
+                      {priceDir&&<span style={{fontSize:14,marginLeft:6}}>{priceDir==="up"?"▲":"▼"}</span>}
+                    </div>
+                  </div>
+                  {liveTicks.length>1?(
+                    <ResponsiveContainer width="100%" height={120}>
+                      <LineChart data={liveTicks} margin={{top:4,right:4,bottom:0,left:0}}>
+                        <YAxis domain={["dataMin","dataMax"]} hide/>
+                        <Line type="monotone" dataKey="p" stroke={priceDir==="down"?C.danger:C.accent} strokeWidth={1.5} dot={false} isAnimationActive={false}/>
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ):(
+                    <div style={{height:120,display:"flex",alignItems:"center",justifyContent:"center",color:C.dim,fontFamily:C.mono,fontSize:12}}>
+                      {wsState==="offline"?"Live stream unavailable — showing daily data below.":"Waiting for live ticks…"}
+                    </div>
+                  )}
+                  <div style={{fontSize:10,color:C.dim,fontFamily:C.mono,marginTop:6,lineHeight:1.5}}>
+                    Real-time trades from Binance · last ~{liveTicks.length} ticks · watching price ≠ a reason to trade. The strategy below still uses daily closes.
+                  </div>
+                </div>
+
                 {/* ── STRATEGY STATE panel: descriptive, educational — not a trade instruction ── */}
                 {(()=>{
                   const on=liveSignal?.on;
@@ -795,8 +900,8 @@ function TradeApp({ initialProfile = "Balanced" }){
             <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"20px 20px",marginBottom:20}}>
               <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:1.5,textTransform:"uppercase",marginBottom:14}}>1 · Anatomy of a candle</div>
               <div style={{display:"flex",gap:20,flexWrap:"wrap",alignItems:"center"}}>
-                <div style={{minWidth:280}}>
-                  <Candle o={38} h={80} l={20} c={70} w={280} ht={240} label/>
+                <div style={{minWidth:200,flexShrink:0}}>
+                  <Candle o={38} h={80} l={20} c={70} w={200} ht={240} label/>
                 </div>
                 <div style={{flex:"1 1 240px",fontSize:13.5,color:C.text,lineHeight:1.7}}>
                   <p style={{margin:"0 0 10px"}}>Each candle covers one time period (here, one day). It shows four prices:</p>
@@ -1058,7 +1163,7 @@ const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf
 // Real customer count shown on the hero. Update this ONE number as your
 // real total grows (keep it truthful — it reflects actual buyers).
 // Later, this can be replaced with a live count pulled from Lemon Squeezy.
-const CUSTOMER_COUNT = 8762;
+const CUSTOMER_COUNT = 1000;
 
 // ═══════════════════════════════════════════════════════════════
 // ⚠️⚠️⚠️  TESTING TOGGLE — TURN OFF BEFORE LAUNCH  ⚠️⚠️⚠️
