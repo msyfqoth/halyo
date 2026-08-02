@@ -36,17 +36,29 @@ function sma(data,period){const out=new Array(data.length).fill(null);let sum=0;
 function rsi(data,period=14){const out=new Array(data.length).fill(null);let gain=0,loss=0;for(let i=1;i<data.length;i++){const ch=data[i].close-data[i-1].close;const g=Math.max(0,ch),l=Math.max(0,-ch);if(i<=period){gain+=g;loss+=l;if(i===period){gain/=period;loss/=period;out[i]=100-100/(1+gain/(loss||1e-9));}}else{gain=(gain*(period-1)+g)/period;loss=(loss*(period-1)+l)/period;out[i]=100-100/(1+gain/(loss||1e-9));}}return out;}
 
 function runBacktest(data,cfg){
-  const{fast,slow,rsiFloor,rsiCeil,costBps,slipBps,useRsi}=cfg;
+  const{fast,slow,rsiFloor,rsiCeil,costBps,slipBps,useRsi,trendFilter}=cfg;
   const fastMA=sma(data,fast),slowMA=sma(data,slow),rsiArr=rsi(data,14);
+  const trendMA=trendFilter?sma(data,100):null;
   const perSideCost=(costBps+slipBps)/10000;
   let inPos=false,entryPrice=0,equity=1,entryIdx=0;
   const equitySeries=[],trades=[];
+  // Execution price for acting on a signal seen at bar i: use bar i+1's OPEN
+  // if available (honest — you can only act after the signal bar closes),
+  // otherwise fall back to bar i+1's close. Never the signal bar itself.
+  const execPrice=(i)=>{ const nb=data[i+1]; if(!nb) return null; return (nb.open!=null?nb.open:nb.close); };
   for(let i=0;i<data.length;i++){
     const f=fastMA[i],s=slowMA[i],r=rsiArr[i],pf=fastMA[i-1],ps=slowMA[i-1];
     if(f!=null&&s!=null&&pf!=null&&ps!=null){
       const cu=pf<=ps&&f>s,cd=pf>=ps&&f<s,rok=!useRsi||(r!=null&&r>rsiFloor&&r<rsiCeil);
-      if(!inPos&&cu&&rok){inPos=true;entryPrice=data[i].close*(1+perSideCost);entryIdx=i;}
-      else if(inPos&&cd){const ex=data[i].close*(1-perSideCost);const ret=ex/entryPrice-1;equity*=1+ret;trades.push({entryT:data[entryIdx].t,exitT:data[i].t,entryPrice:data[entryIdx].close,exitPrice:data[i].close,ret,bars:i-entryIdx});inPos=false;}
+      const trendOk=!trendFilter||(trendMA[i]!=null&&data[i].close>trendMA[i]);
+      if(!inPos&&cu&&rok&&trendOk){
+        const px=execPrice(i); // enter next bar
+        if(px!=null){inPos=true;entryPrice=px*(1+perSideCost);entryIdx=i+1;}
+      }
+      else if(inPos&&cd){
+        const px=execPrice(i); // exit next bar
+        if(px!=null){const ex=px*(1-perSideCost);const ret=ex/entryPrice-1;equity*=1+ret;trades.push({entryT:data[entryIdx].t,exitT:data[i+1].t,entryPrice,exitPrice:ex,ret,bars:(i+1)-entryIdx});inPos=false;}
+      }
     }
     let me=equity;if(inPos)me=equity*(1+(data[i].close/entryPrice-1));
     equitySeries.push({t:data[i].t,equity:me});
@@ -65,10 +77,13 @@ const fmtPct=(x)=>(x==null||!isFinite(x)?"—":`${(x*100).toFixed(1)}%`);
 const fmtNum=(x)=>(x==null||!isFinite(x)?"—":x.toFixed(2));
 const fmtDate=(t)=>new Date(t).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"2-digit"});
 
-// ── walk-forward analysis ──
-// Rolls a test window forward across the series in N sequential folds.
-// Each fold is judged only on its own out-of-sample slice; results are
-// aggregated so the win rate reflects consistency, not one lucky period.
+// ── multi-period test (segmented consistency check) ──
+// NOTE: this is NOT true walk-forward optimisation (which re-fits parameters
+// on each in-sample window and tests on the next out-of-sample window). It
+// splits the series into N sequential segments and backtests each with the
+// SAME fixed parameters, to show whether results are consistent across time
+// or came from one lucky stretch. Labelled "multi-period test" in the UI to
+// avoid overclaiming. True walk-forward is a roadmap item.
 function walkForward(data,cfg,folds=5){
   if(data.length<folds*30)folds=Math.max(2,Math.floor(data.length/40));
   const foldSize=Math.floor(data.length/folds);
@@ -130,11 +145,29 @@ const LESSONS=[
 ];
 
 function TradeApp({ initialProfile = "Balanced" }){
-  const [tab,setTab]=useState("trade"); // trade | learn
+  const [tab,setTab]=useState("trade"); // trade | lab | learn
   const [profile,setProfile]=useState(initialProfile);
   const [showTutorial,setShowTutorial]=useState(true); // first-run
   const [tutStep,setTutStep]=useState(0);
   const [openLesson,setOpenLesson]=useState(null);
+
+  // ── Lab (strategy sandbox) state — independent of the Trade tab ──
+  const [labAsset,setLabAsset]=useState("BTC/USD");
+  const [labFast,setLabFast]=useState(10);
+  const [labSlow,setLabSlow]=useState(30);
+  const [labMode,setLabMode]=useState("simple");   // simple | medium | advanced
+  const [labUseRsi,setLabUseRsi]=useState(false);   // medium+
+  const [labRsiFloor,setLabRsiFloor]=useState(30);  // medium+
+  const [labRsiCeil,setLabRsiCeil]=useState(70);    // medium+
+  const [labCost,setLabCost]=useState(10);          // medium+ (bps)
+  const [labSpan,setLabSpan]=useState(730);         // medium+ days of data used
+  const [labSplitPct,setLabSplitPct]=useState(65);  // advanced (train %)
+  const [labTrendFilter,setLabTrendFilter]=useState(false); // advanced: long-term trend filter
+
+  // ── Candles tab state ──
+  const [candleQ,setCandleQ]=useState(0);       // current quiz question index
+  const [candleAns,setCandleAns]=useState(null); // selected answer for current q
+  const [candleScore,setCandleScore]=useState(0);
 
   const preset=STRATS[profile]||STRATS["Balanced"];
   const [asset,setAsset]=useState(preset.defaultAsset);
@@ -154,7 +187,7 @@ function TradeApp({ initialProfile = "Balanced" }){
       if(!res.ok)throw new Error("binance "+res.status);
       const rows=await res.json();
       if(!Array.isArray(rows)||rows.length<60)throw new Error("thin");
-      const series=rows.map((r,i)=>({i,t:r[0],close:parseFloat(r[4])}));
+      const series=rows.map((r,i)=>({i,t:r[0],open:parseFloat(r[1]),close:parseFloat(r[4])}));
       setSeriesCache(c=>({...c,[a]:{data:series,live:true,src:"Binance"}}));
       setStatus("live");
       return;
@@ -185,6 +218,38 @@ function TradeApp({ initialProfile = "Balanced" }){
   const trainBT=useMemo(()=>data.length?runBacktest(data.slice(0,splitIdx),cfg):null,[data,splitIdx,profile]);
   const testBT=useMemo(()=>data.length?runBacktest(data.slice(splitIdx),cfg):null,[data,splitIdx,profile]);
   const wf=useMemo(()=>data.length?walkForward(data,cfg,5):null,[data,profile]);
+
+  // ── Lab: fetch its asset's data and run an in-sample vs out-of-sample backtest ──
+  useEffect(()=>{ if(tab==="lab" && !seriesCache[labAsset]) fetchData(labAsset); },[tab,labAsset,seriesCache,fetchData]);
+  const labEntry=seriesCache[labAsset];
+  const labDataAll=labEntry?.data||[];
+  // medium+ can limit how much history is used (date-range style)
+  const labData=(labMode!=="simple" && labDataAll.length>labSpan) ? labDataAll.slice(labDataAll.length-labSpan) : labDataAll;
+  const labSplit=Math.floor(labData.length*((labMode==="advanced"?labSplitPct:65)/100));
+  const labCfg={
+    fast:labFast, slow:labSlow,
+    rsiFloor:labRsiFloor, rsiCeil:labRsiCeil,
+    costBps:(labMode==="simple"?10:labCost), slipBps:5,
+    useRsi:(labMode==="simple"?false:labUseRsi),
+    trendFilter:(labMode==="advanced"?labTrendFilter:false),
+  };
+  const labDeps=[labData,labSplit,labFast,labSlow,labMode,labUseRsi,labRsiFloor,labRsiCeil,labCost,labTrendFilter];
+  const labTrain=useMemo(()=>labData.length?runBacktest(labData.slice(0,labSplit),labCfg):null,labDeps);
+  const labTest=useMemo(()=>labData.length?runBacktest(labData.slice(labSplit),labCfg):null,labDeps);
+  const labFull=useMemo(()=>labData.length?runBacktest(labData,labCfg):null,labDeps);
+  const labEquity=useMemo(()=>(labTrain&&labTest)?[...labTrain.equitySeries,...labTest.equitySeries]:[],[labTrain,labTest]);
+
+  // Plain-language interpretation of the lab result — teaches, doesn't advise.
+  const labVerdict=useMemo(()=>{
+    if(!labTrain||!labTest) return null;
+    const tr=labTrain.metrics.totalReturn, te=labTest.metrics.totalReturn, bh=labFull?.metrics.buyHold??0;
+    const fewTrades=(labTest.metrics.nTrades||0)<5;
+    if(fewTrades) return {tone:C.dim, text:"Very few trades in the out-of-sample period — not enough to judge. Try a longer history or faster averages so there's more to learn from."};
+    if(tr>0.15 && te<=0) return {tone:C.danger, text:"Classic overfitting: strong on data it trained on, but it lost on data it never saw. Looking good on the past doesn't mean it works going forward — this is the trap most 'winning' strategies fall into."};
+    if(te>0 && te<bh) return {tone:C.warn, text:"It made money out-of-sample, but less than simply buying and holding would have — after all that effort, doing nothing beat it. Common, and worth sitting with."};
+    if(te>0 && te>=bh) return {tone:C.accent, text:"It held up on unseen data and beat buy-and-hold here. Encouraging — but one window isn't proof. Change the asset or split and see if it survives. Robustness matters more than one good result."};
+    return {tone:C.warn, text:"Modest or negative out-of-sample result. That's the honest norm — most simple strategies don't beat the market after costs. The point is learning to see that clearly."};
+  },[labTrain,labTest,labFull]);
 
   const dp=COINS[asset].dp;
   let stance="NEUTRAL",curRsi=null,lastBar=null,cf=null,cs=null;
@@ -230,6 +295,70 @@ function TradeApp({ initialProfile = "Balanced" }){
     </div>
   );
 
+  const LabStat=({label,value,tone})=>(
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"5px 0",borderBottom:`1px solid ${C.line}`}}>
+      <span style={{fontSize:12,color:C.dim}}>{label}</span>
+      <span style={{fontSize:16,fontFamily:C.mono,fontWeight:600,color:tone||C.text}}>{value}</span>
+    </div>
+  );
+
+  // Tap/hover info tooltip — mobile-friendly (tap toggles it open)
+  const InfoTip=({text})=>{
+    const [open,setOpen]=useState(false);
+    return (
+      <span style={{position:"relative",display:"inline-block",marginLeft:5}}>
+        <span
+          onClick={(e)=>{e.stopPropagation();setOpen(o=>!o);}}
+          onMouseEnter={()=>setOpen(true)} onMouseLeave={()=>setOpen(false)}
+          style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:15,height:15,borderRadius:"50%",
+            border:`1px solid ${C.dim}`,color:C.dim,fontSize:10,fontStyle:"italic",cursor:"pointer",fontFamily:"Georgia,serif",userSelect:"none",lineHeight:1}}
+        >i</span>
+        {open && (
+          <span style={{position:"absolute",bottom:"140%",left:"50%",transform:"translateX(-50%)",width:210,
+            background:"#05080d",border:`1px solid ${C.line}`,borderRadius:8,padding:"9px 11px",fontSize:11.5,
+            color:C.text,lineHeight:1.5,zIndex:20,boxShadow:"0 6px 20px rgba(0,0,0,0.5)",fontFamily:C.sans,fontWeight:400,textTransform:"none",letterSpacing:0}}>
+            {text}
+          </span>
+        )}
+      </span>
+    );
+  };
+
+  // ── Candle: draws a single candlestick as SVG ──
+  // props: o,h,l,c (open,high,low,close) on a 0–100 scale; w=width; label=show anatomy labels
+  const Candle=({o,h,l,c,w=120,ht=240,label=false,showLabels=[]})=>{
+    const pad=label?90:14;
+    const hi=Math.max(o,h,l,c),lo=Math.min(o,h,l,c);
+    const range=(hi-lo)||1;
+    const y=(v)=>ht-14-((v-lo)/range)*(ht-28);
+    const up=c>=o;
+    const col=up?C.accent:C.danger;
+    const cx=pad+ (w-pad)/2;
+    const bw=Math.min(38,(w-pad)*0.55);
+    const bodyTop=y(Math.max(o,c)), bodyBot=y(Math.min(o,c));
+    return (
+      <svg width={w} height={ht} style={{overflow:"visible"}}>
+        {/* wick */}
+        <line x1={cx} y1={y(h)} x2={cx} y2={y(l)} stroke={col} strokeWidth={2}/>
+        {/* body */}
+        <rect x={cx-bw/2} y={bodyTop} width={bw} height={Math.max(2,bodyBot-bodyTop)} fill={col} rx={2}/>
+        {label && (
+          <g fontFamily={C.mono} fontSize={10} fill={C.dim}>
+            <line x1={cx+bw/2+6} y1={y(h)} x2={cx+bw/2+40} y2={y(h)} stroke={C.line}/>
+            <text x={cx+bw/2+44} y={y(h)+3} fill={C.text}>High (wick top)</text>
+            <line x1={cx+bw/2+6} y1={bodyTop} x2={cx+bw/2+40} y2={bodyTop} stroke={C.line}/>
+            <text x={cx+bw/2+44} y={bodyTop+3}>{up?"Close":"Open"} (body top)</text>
+            <line x1={cx+bw/2+6} y1={bodyBot} x2={cx+bw/2+40} y2={bodyBot} stroke={C.line}/>
+            <text x={cx+bw/2+44} y={bodyBot+3}>{up?"Open":"Close"} (body bottom)</text>
+            <line x1={cx+bw/2+6} y1={y(l)} x2={cx+bw/2+40} y2={y(l)} stroke={C.line}/>
+            <text x={cx+bw/2+44} y={y(l)+3} fill={C.text}>Low (wick bottom)</text>
+            <text x={pad-8} y={(bodyTop+bodyBot)/2+3} textAnchor="end" fill={col} fontWeight="700">{up?"UP":"DOWN"}</text>
+          </g>
+        )}
+      </svg>
+    );
+  };
+
   return(
     <div style={{background:C.bg,minHeight:"100vh",color:C.text,fontFamily:C.sans}}>
       {/* top bar */}
@@ -238,7 +367,7 @@ function TradeApp({ initialProfile = "Balanced" }){
           <div style={{display:"flex",alignItems:"center",gap:18}}>
             <span style={{fontSize:18,fontWeight:700,letterSpacing:-0.5}}>Hal<span style={{color:C.accent}}>yo</span></span>
             <div style={{display:"flex",gap:4}}>
-              {["trade","learn"].map(t=>(
+              {["trade","lab","candles","learn"].map(t=>(
                 <button key={t} onClick={()=>setTab(t)} style={{
                   background:tab===t?C.panel:"transparent",color:tab===t?C.text:C.dim,
                   border:`1px solid ${tab===t?C.line:"transparent"}`,borderRadius:6,
@@ -381,26 +510,27 @@ function TradeApp({ initialProfile = "Balanced" }){
                   <Metric label="Avg win/loss" value={`${fmtPct(testBT.metrics.avgWin)} / ${fmtPct(testBT.metrics.avgLoss)}`}/>
                 </div>
 
-                {/* ── WALK-FORWARD ── */}
+                {/* ── MULTI-PERIOD TEST ── */}
                 {wf&&wf.windows.length>0&&(()=>{
                   const a=wf.agg;
                   const consistent=a.consistency>=0.6;
                   return(
                     <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:16,marginBottom:16}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                        <span style={{fontSize:11,letterSpacing:1,textTransform:"uppercase",color:C.violet,fontWeight:600}}>Walk-forward test</span>
-                        <span style={{fontSize:10,color:C.dim,fontFamily:C.mono}}>(the strictest, most honest check)</span>
+                        <span style={{fontSize:11,letterSpacing:1,textTransform:"uppercase",color:C.violet,fontWeight:600}}>Multi-period test</span>
+                        <span style={{fontSize:10,color:C.dim,fontFamily:C.mono}}>(consistency check across time)</span>
                       </div>
                       <div style={{fontSize:12,color:C.dim,lineHeight:1.5,marginBottom:14,maxWidth:600}}>
-                        Instead of one split, the strategy is retested across {a.totalWindows} separate time windows.
-                        This shows whether the edge held up <em>consistently</em> — or came from one lucky stretch.
+                        The strategy is retested across {a.totalWindows} separate time windows.
+                        This shows whether results held up <em>consistently</em> — or came from one lucky stretch.
+                        <span style={{color:C.dim,fontStyle:"italic"}}> (Not the same as true walk-forward optimisation, which is on our roadmap.)</span>
                       </div>
 
                       {/* aggregate row */}
                       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:14}}>
-                        <Metric label="WF win rate" value={fmtPct(a.winRate)} sub={`${a.nTrades} trades, all windows`} tone={a.winRate>=0.5?C.accent:C.warn}/>
-                        <Metric label="WF expectancy" value={fmtPct(a.expectancy)} sub="per trade, after cost" tone={a.expectancy>0?C.accent:C.danger}/>
-                        <Metric label="WF return" value={fmtPct(a.totalReturn)} sub="compounded" tone={a.totalReturn>0?C.accent:C.danger}/>
+                        <Metric label="Win rate" value={fmtPct(a.winRate)} sub={`${a.nTrades} trades, all windows`} tone={a.winRate>=0.5?C.accent:C.warn}/>
+                        <Metric label="Expectancy" value={fmtPct(a.expectancy)} sub="per trade, after cost" tone={a.expectancy>0?C.accent:C.danger}/>
+                        <Metric label="Return" value={fmtPct(a.totalReturn)} sub="compounded" tone={a.totalReturn>0?C.accent:C.danger}/>
                         <Metric label="Consistency" value={`${a.profitableWindows}/${a.totalWindows}`} sub="profitable windows" tone={consistent?C.accent:C.warn}/>
                       </div>
 
@@ -487,8 +617,270 @@ function TradeApp({ initialProfile = "Balanced" }){
               </>
             )}
           </>
+        ):tab==="lab"?(
+          // ── LAB TAB — Simple mode strategy sandbox ──
+          <div style={{maxWidth:820,margin:"0 auto"}}>
+            <div style={{marginBottom:14}}>
+              <h2 style={{fontSize:24,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px"}}>Strategy Lab</h2>
+              <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:0,maxWidth:640}}>
+                Build a strategy and see honestly how it would have performed — after costs, split
+                into what it "trained" on vs. data it never saw. Start Simple, then add complexity.
+                This is for <strong style={{color:C.text}}>learning how strategies behave</strong>, not finding one to trade.
+              </p>
+            </div>
+
+            {/* complexity selector */}
+            <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+              {[["simple","Simple"],["medium","Medium"],["advanced","Advanced"]].map(([m,label])=>(
+                <button key={m} onClick={()=>setLabMode(m)} style={{
+                  background:labMode===m?C.accent:C.panel2, color:labMode===m?"#08120a":C.dim,
+                  border:`1px solid ${labMode===m?C.accent:C.line}`, borderRadius:8, padding:"8px 18px",
+                  fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:C.sans,
+                }}>{label}</button>
+              ))}
+              <div style={{flex:1}}/>
+            </div>
+            <div style={{fontSize:11.5,color:C.dim,marginBottom:14,lineHeight:1.5}}>
+              {labMode==="simple" && "Simple: just the two moving averages. The cleanest way to see a crossover strategy."}
+              {labMode==="medium" && "Medium: add an RSI filter, adjust trading costs, and choose how much history to test on."}
+              {labMode==="advanced" && "Advanced: add a long-term trend filter and change the train/test split. Watch how easy it is to 'tune' great in-sample numbers that fall apart out-of-sample — that's the overfitting trap."}
+            </div>
+
+            {/* controls */}
+            <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"18px 18px",marginBottom:16}}>
+              <div style={{display:"flex",flexWrap:"wrap",gap:20,alignItems:"flex-end"}}>
+                <div>
+                  <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Asset</div>
+                  <select value={labAsset} onChange={e=>setLabAsset(e.target.value)} style={{
+                    background:C.panel2,color:C.text,border:`1px solid ${C.line}`,borderRadius:6,padding:"8px 12px",fontSize:13,fontFamily:C.mono,cursor:"pointer",
+                  }}>
+                    {Object.keys(COINS).map(a=><option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+                <div style={{flex:"1 1 180px"}}>
+                  <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>
+                    Fast MA — <span style={{color:C.accent}}>{labFast} days</span>
+                    <InfoTip text="The short-term average of price. It reacts quickly to recent moves. When it rises above the slow average, that's read as a possible uptrend starting."/>
+                  </div>
+                  <input type="range" min={2} max={50} value={labFast} onChange={e=>setLabFast(Math.min(+e.target.value,labSlow-1))} style={{width:"100%",accentColor:C.accent}}/>
+                </div>
+                <div style={{flex:"1 1 180px"}}>
+                  <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>
+                    Slow MA — <span style={{color:C.blue}}>{labSlow} days</span>
+                    <InfoTip text="The long-term average of price. It moves slowly and smooths out noise. The strategy buys when the fast average crosses above this one, and sells when it crosses back below."/>
+                  </div>
+                  <input type="range" min={5} max={120} value={labSlow} onChange={e=>setLabSlow(Math.max(+e.target.value,labFast+1))} style={{width:"100%",accentColor:C.blue}}/>
+                </div>
+              </div>
+
+              {/* MEDIUM controls */}
+              {labMode!=="simple" && (
+                <div style={{marginTop:18,paddingTop:16,borderTop:`1px solid ${C.line}`,display:"flex",flexWrap:"wrap",gap:20,alignItems:"flex-end"}}>
+                  <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:C.text}}>
+                    <input type="checkbox" checked={labUseRsi} onChange={e=>setLabUseRsi(e.target.checked)} style={{accentColor:C.accent,width:16,height:16}}/>
+                    RSI filter
+                  </label>
+                  <InfoTip text="RSI measures momentum from 0–100. This filter only lets the strategy buy when RSI is in a 'normal' range — the idea is to avoid buying when price is already overheated. Whether it actually helps is exactly what you're here to test."/>
+                  {labUseRsi && (
+                    <>
+                      <div style={{flex:"1 1 150px"}}>
+                        <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>RSI floor — <span style={{color:C.accent}}>{labRsiFloor}</span></div>
+                        <input type="range" min={10} max={50} value={labRsiFloor} onChange={e=>setLabRsiFloor(Math.min(+e.target.value,labRsiCeil-5))} style={{width:"100%",accentColor:C.accent}}/>
+                      </div>
+                      <div style={{flex:"1 1 150px"}}>
+                        <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>RSI ceiling — <span style={{color:C.blue}}>{labRsiCeil}</span></div>
+                        <input type="range" min={50} max={90} value={labRsiCeil} onChange={e=>setLabRsiCeil(Math.max(+e.target.value,labRsiFloor+5))} style={{width:"100%",accentColor:C.blue}}/>
+                      </div>
+                    </>
+                  )}
+                  <div style={{flex:"1 1 150px"}}>
+                    <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Cost — <span style={{color:C.warn}}>{(labCost/100).toFixed(2)}%</span> / trade<InfoTip text="What each trade costs you in fees and slippage. It sounds tiny, but a strategy that trades often can be quietly killed by costs. Slide it up and watch profitable strategies turn into losers — this is where most edges die."/></div>
+                    <input type="range" min={0} max={50} value={labCost} onChange={e=>setLabCost(+e.target.value)} style={{width:"100%",accentColor:C.warn}}/>
+                  </div>
+                  <div style={{flex:"1 1 150px"}}>
+                    <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>History — <span style={{color:C.text}}>{labSpan} days</span><InfoTip text="How much past data to test on. More history means more market conditions (bull, bear, sideways) — a strategy that only worked in one kind of market often falls apart across all of them."/></div>
+                    <input type="range" min={180} max={730} step={30} value={labSpan} onChange={e=>setLabSpan(+e.target.value)} style={{width:"100%",accentColor:C.dim}}/>
+                  </div>
+                </div>
+              )}
+
+              {/* ADVANCED controls */}
+              {labMode==="advanced" && (
+                <div style={{marginTop:16,paddingTop:16,borderTop:`1px solid ${C.line}`,display:"flex",flexWrap:"wrap",gap:20,alignItems:"flex-end"}}>
+                  <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:C.text}}>
+                    <input type="checkbox" checked={labTrendFilter} onChange={e=>setLabTrendFilter(e.target.checked)} style={{accentColor:C.accent,width:16,height:16}}/>
+                    Long-term trend filter (only buy above 100-day average)
+                  </label>
+                  <InfoTip text="A common pro rule: only take buy signals when price is above its 100-day average, i.e. only trade 'with the tide.' It usually cuts the number of trades. Test whether it actually improves the out-of-sample result or just looks tidier."/>
+                  <div style={{flex:"1 1 200px"}}>
+                    <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Train / test split — <span style={{color:C.blue}}>{labSplitPct}% / {100-labSplitPct}%</span><InfoTip text="How the data is divided: the strategy 'learns' on the first part, then is judged on the rest it never saw. Slide this around — if the result swings wildly depending on where you cut, that's a warning the strategy isn't robust."/></div>
+                    <input type="range" min={40} max={80} step={5} value={labSplitPct} onChange={e=>setLabSplitPct(+e.target.value)} style={{width:"100%",accentColor:C.blue}}/>
+                  </div>
+                </div>
+              )}
+              <div style={{fontSize:11,color:C.dim,marginTop:12,lineHeight:1.5}}>
+                When the {labFast}-day average crosses above the {labSlow}-day, the strategy buys; when it crosses below, it sells. Drag the sliders and watch the results change.
+              </div>
+            </div>
+
+            {!labData.length?(
+              <div style={{textAlign:"center",padding:40,color:C.dim,fontFamily:C.mono,fontSize:13}}>Loading {labAsset} data…</div>
+            ):(
+              <>
+                {/* results: in-sample vs out-of-sample side by side */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12,marginBottom:16}}>
+                  <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:18}}>
+                    <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>In-sample (trained on)<InfoTip text="Results on the older data the strategy was built around. Almost anything can look good here — you're seeing how it did on the very data used to pick the settings."/></div>
+                    <LabStat label="Return" value={fmtPct(labTrain?.metrics.totalReturn)} tone={labTrain?.metrics.totalReturn>0?C.accent:C.danger}/>
+                    <LabStat label="Win rate" value={fmtPct(labTrain?.metrics.winRate)}/>
+                    <LabStat label="Worst dip" value={fmtPct(labTrain?.metrics.maxDD)} tone={C.danger}/>
+                    <LabStat label="Trades" value={labTrain?.metrics.nTrades??"—"}/>
+                  </div>
+                  <div style={{background:C.panel,border:`1.5px solid ${C.accent}`,borderRadius:12,padding:18}}>
+                    <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Out-of-sample (never seen) ★<InfoTip text="Results on newer data the strategy never saw while being built. THIS is the honest test — it's the closest thing to 'how would it have done on the future.' Trust this column far more than the other one."/></div>
+                    <LabStat label="Return" value={fmtPct(labTest?.metrics.totalReturn)} tone={labTest?.metrics.totalReturn>0?C.accent:C.danger}/>
+                    <LabStat label="Win rate" value={fmtPct(labTest?.metrics.winRate)}/>
+                    <LabStat label="Worst dip" value={fmtPct(labTest?.metrics.maxDD)} tone={C.danger}/>
+                    <LabStat label="Trades" value={labTest?.metrics.nTrades??"—"}/>
+                  </div>
+                </div>
+
+                {/* self-explaining verdict — interprets the result in plain language */}
+                {labVerdict && (
+                  <div style={{background:C.panel,border:`1px solid ${labVerdict.tone}`,borderRadius:10,padding:"14px 16px",marginBottom:16}}>
+                    <div style={{fontSize:10,fontFamily:C.mono,letterSpacing:1.5,textTransform:"uppercase",color:labVerdict.tone,marginBottom:6}}>What this result is telling you</div>
+                    <div style={{fontSize:13.5,color:C.text,lineHeight:1.6}}>{labVerdict.text}</div>
+                    <div style={{fontSize:11.5,color:C.dim,marginTop:8}}>For reference, simply buying and holding {labAsset} over this period returned {fmtPct(labFull?.metrics.buyHold)}.</div>
+                  </div>
+                )}
+
+                {/* equity curve */}
+                <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"16px 12px 8px"}}>
+                  <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:8,paddingLeft:8}}>Equity curve · train → test</div>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={labEquity}>
+                      <defs><linearGradient id="labEq" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.accent} stopOpacity={0.4}/><stop offset="100%" stopColor={C.accent} stopOpacity={0}/></linearGradient></defs>
+                      <XAxis dataKey="t" tickFormatter={fmtDate} tick={{fontSize:10,fill:C.dim}} minTickGap={40}/>
+                      <YAxis tick={{fontSize:10,fill:C.dim}} width={40} domain={["auto","auto"]}/>
+                      <Tooltip contentStyle={{background:C.panel2,border:`1px solid ${C.line}`,borderRadius:8,fontSize:12}} labelFormatter={fmtDate} formatter={(v)=>[fmtNum(v),"equity"]}/>
+                      {labData[labSplit]&&<ReferenceLine x={labData[labSplit].t} stroke={C.blue} strokeDasharray="4 4" label={{value:"test →",fill:C.blue,fontSize:10}}/>}
+                      <Area type="monotone" dataKey="equity" stroke={C.accent} strokeWidth={2} fill="url(#labEq)"/>
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div style={{fontSize:11,color:C.dim,textAlign:"center",marginTop:14,fontFamily:C.mono,lineHeight:1.6}}>
+                  Educational sandbox · results are historical, after costs · a good backtest never guarantees future results.
+                  <div style={{marginTop:8}}>
+                    <a href="/risk-disclaimer.html" target="_blank" rel="noopener" style={{color:C.dim,textDecoration:"underline"}}>Risk Disclaimer</a>
+                    <span style={{margin:"0 6px"}}>·</span>
+                    <a href="mailto:support@halyoapp.com" style={{color:C.dim,textDecoration:"underline"}}>Support</a>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        ):tab==="candles"?(
+          // ── CANDLES TAB — anatomy + patterns + quiz ──
+          <div style={{maxWidth:820,margin:"0 auto"}}>
+            <div style={{marginBottom:20}}>
+              <h2 style={{fontSize:24,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px"}}>Reading candles</h2>
+              <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:0,maxWidth:640}}>
+                Every candle tells you four numbers and one short story. Learn to read them here —
+                honestly, including what they <strong style={{color:C.text}}>can't</strong> tell you.
+              </p>
+            </div>
+
+            {/* SECTION 1 — anatomy */}
+            <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"20px 20px",marginBottom:20}}>
+              <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:1.5,textTransform:"uppercase",marginBottom:14}}>1 · Anatomy of a candle</div>
+              <div style={{display:"flex",gap:20,flexWrap:"wrap",alignItems:"center"}}>
+                <div style={{minWidth:280}}>
+                  <Candle o={38} h={80} l={20} c={70} w={280} ht={240} label/>
+                </div>
+                <div style={{flex:"1 1 240px",fontSize:13.5,color:C.text,lineHeight:1.7}}>
+                  <p style={{margin:"0 0 10px"}}>Each candle covers one time period (here, one day). It shows four prices:</p>
+                  <p style={{margin:"0 0 6px"}}><strong style={{color:C.accent}}>Open</strong> — price at the start · <strong style={{color:C.accent}}>Close</strong> — price at the end.</p>
+                  <p style={{margin:"0 0 6px"}}>The thick <strong>body</strong> spans open→close. The thin <strong>wicks</strong> reach the <strong>High</strong> and <strong>Low</strong> touched during the period.</p>
+                  <p style={{margin:"0 0 6px"}}><span style={{color:C.accent,fontWeight:700}}>Green</span> = closed higher than it opened (buyers won). <span style={{color:C.danger,fontWeight:700}}>Red</span> = closed lower (sellers won).</p>
+                  <p style={{margin:"10px 0 0",fontSize:12,color:C.dim,fontStyle:"italic"}}>That's it. A candle is a record of what already happened — not a prediction.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 2 — patterns */}
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:1.5,textTransform:"uppercase",marginBottom:14,paddingLeft:2}}>2 · Common patterns (and the honest truth)</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12}}>
+                {CANDLE_PATTERNS.map((p,i)=>(
+                  <div key={i} style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:16,display:"flex",gap:14}}>
+                    <div style={{flexShrink:0}}><Candle {...p.ohlc} w={64} ht={120}/></div>
+                    <div style={{fontSize:12.5,lineHeight:1.55}}>
+                      <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:4}}>{p.name}</div>
+                      <div style={{color:C.dim,marginBottom:6}}>{p.what}</div>
+                      <div style={{color:C.text,marginBottom:6}}><strong style={{color:C.blue}}>Shows:</strong> {p.means}</div>
+                      <div style={{color:C.warn,fontSize:11.5,fontStyle:"italic"}}>{p.honest}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* SECTION 3 — quiz */}
+            <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"20px 20px",marginBottom:20}}>
+              <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:1.5,textTransform:"uppercase",marginBottom:14}}>3 · Test yourself</div>
+              {candleQ>=CANDLE_QUIZ.length ? (
+                <div style={{textAlign:"center",padding:"20px 0"}}>
+                  <div style={{fontSize:34,fontWeight:800,color:C.accent,fontFamily:C.mono}}>{candleScore}/{CANDLE_QUIZ.length}</div>
+                  <div style={{fontSize:14,color:C.text,margin:"8px 0 4px"}}>Nice work. You can read the basic candles.</div>
+                  <div style={{fontSize:12,color:C.dim,maxWidth:420,margin:"0 auto 16px",lineHeight:1.6}}>Remember the honest part: naming a candle is easy — but no candle reliably predicts the next one. Use the Lab to test whether any pattern-based idea actually holds up.</div>
+                  <button onClick={()=>{setCandleQ(0);setCandleAns(null);setCandleScore(0);}} style={{background:C.panel2,color:C.text,border:`1px solid ${C.line}`,borderRadius:8,padding:"10px 20px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Try again</button>
+                </div>
+              ):(
+                <>
+                  <div style={{display:"flex",gap:20,alignItems:"center",flexWrap:"wrap"}}>
+                    <div style={{flexShrink:0}}><Candle {...CANDLE_QUIZ[candleQ].ohlc} w={90} ht={180}/></div>
+                    <div style={{flex:"1 1 260px"}}>
+                      <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,marginBottom:8}}>Question {candleQ+1} / {CANDLE_QUIZ.length}</div>
+                      <div style={{fontSize:15,color:C.text,marginBottom:14,lineHeight:1.5}}>{CANDLE_QUIZ[candleQ].q}</div>
+                      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                        {CANDLE_QUIZ[candleQ].options.map((opt,oi)=>{
+                          const answered=candleAns!==null;
+                          const correct=oi===CANDLE_QUIZ[candleQ].answer;
+                          const chosen=candleAns===oi;
+                          let bg=C.panel2,bd=C.line,cl=C.text;
+                          if(answered&&correct){bg="rgba(74,222,128,0.12)";bd=C.accent;cl=C.accent;}
+                          else if(answered&&chosen&&!correct){bg="rgba(239,68,68,0.12)";bd=C.danger;cl=C.danger;}
+                          return (
+                            <button key={oi} disabled={answered}
+                              onClick={()=>{setCandleAns(oi); if(oi===CANDLE_QUIZ[candleQ].answer)setCandleScore(s=>s+1);}}
+                              style={{textAlign:"left",background:bg,border:`1px solid ${bd}`,color:cl,borderRadius:8,padding:"11px 14px",fontSize:13.5,cursor:answered?"default":"pointer",fontFamily:C.sans}}>
+                              {opt}{answered&&correct?"  ✓":answered&&chosen?"  ✗":""}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  {candleAns!==null && (
+                    <div style={{marginTop:16,padding:"12px 14px",background:C.panel2,borderRadius:8,fontSize:12.5,color:C.text,lineHeight:1.6}}>
+                      {CANDLE_QUIZ[candleQ].explain}
+                      <div style={{marginTop:10}}>
+                        <button onClick={()=>{setCandleQ(q=>q+1);setCandleAns(null);}} style={{background:C.accent,color:"#08120a",border:"none",borderRadius:8,padding:"9px 18px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                          {candleQ+1<CANDLE_QUIZ.length?"Next →":"See result →"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div style={{fontSize:11,color:C.dim,textAlign:"center",fontFamily:C.mono,lineHeight:1.6,paddingBottom:8}}>
+              Candles show what happened — never a guarantee of what's next. Educational only, not advice.
+            </div>
+          </div>
         ):(
-          // ── LEARN TAB ──
           <div style={{maxWidth:720,margin:"0 auto"}}>
             <div style={{marginBottom:8}}>
               <h2 style={{fontSize:24,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px"}}>Learn the basics first</h2>
@@ -666,7 +1058,18 @@ const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf
 // Real customer count shown on the hero. Update this ONE number as your
 // real total grows (keep it truthful — it reflects actual buyers).
 // Later, this can be replaced with a live count pulled from Lemon Squeezy.
-const CUSTOMER_COUNT = 7329;
+const CUSTOMER_COUNT = 1000;
+
+// ═══════════════════════════════════════════════════════════════
+// ⚠️⚠️⚠️  TESTING TOGGLE — TURN OFF BEFORE LAUNCH  ⚠️⚠️⚠️
+// While this is true, ANYONE can unlock the app on the LIVE site by
+// typing the test key  TEST-TEST-TEST-TEST  at the license gate.
+// This lets you preview/test on your phone without a real key.
+// SET THIS TO false (and push) BEFORE you launch or run ads —
+// otherwise the app is free for anyone who knows the test key.
+const TESTING_MODE = false;   // ← change to false before launch
+const TEST_KEY = "TEST-TEST-TEST-TEST";
+// ═══════════════════════════════════════════════════════════════
 
 // Real customer feedback. Keep these genuine — add/rotate as you collect more.
 const TESTIMONIALS = [
@@ -675,7 +1078,47 @@ const TESTIMONIALS = [
   { quote: "For those who want to learn, this app can guide you and make it easier to understand market trends.", name: "Ng Choon Wai", tag: "Telemarketer" },
 ];
 
-function Funnel({ onComplete }) {
+// ── Candle patterns (o,h,l,c on a 0-100 scale) + honest explanations ──
+const CANDLE_PATTERNS = [
+  { name:"Doji", ohlc:{o:50,h:75,l:25,c:51},
+    what:"Open and close almost equal — a small body with wicks on both sides.",
+    means:"Buyers and sellers fought to a standstill; the market is undecided.",
+    honest:"Often called a 'reversal signal,' but on its own a doji predicts very little. It's context (where it appears) that traders read into — and that reading is frequently wrong." },
+  { name:"Hammer", ohlc:{o:65,h:70,l:20,c:68},
+    what:"Small body near the top, long lower wick — price fell hard then recovered.",
+    means:"Sellers pushed price down but buyers stepped back in by the close.",
+    honest:"Popular as a 'bottom is in, buy now' signal. In reality it works sometimes and fails often — treating it as a guarantee is how people lose money." },
+  { name:"Bullish engulfing", ohlc:{o:40,h:78,l:38,c:74},
+    what:"A big up-candle whose body fully covers the previous down-candle's body.",
+    means:"Buyers overwhelmed sellers decisively in this period.",
+    honest:"Looks powerful, and traders love it — but 'looks powerful' isn't the same as 'price will keep rising.' Test any pattern before trusting it (that's what the Lab is for)." },
+  { name:"Long green (bullish)", ohlc:{o:30,h:82,l:28,c:80},
+    what:"A large body with the close far above the open, tiny wicks.",
+    means:"Strong, one-sided buying through the whole period.",
+    honest:"Shows what already happened — strong buying. It says nothing certain about the next candle. Momentum can continue or reverse the very next day." },
+  { name:"Long red (bearish)", ohlc:{o:80,h:82,l:20,c:24},
+    what:"A large body closing far below the open — heavy selling.",
+    means:"Sellers dominated the whole period.",
+    honest:"A red candle records selling that already occurred; it is not a reliable prediction that selling continues. Panic-selling on one red candle is a classic beginner mistake." },
+];
+
+// Quiz: show a candle, ask what it is
+const CANDLE_QUIZ = [
+  { ohlc:{o:50,h:75,l:25,c:51}, q:"Open and close are nearly equal, with wicks both sides. What is this?",
+    options:["Doji","Hammer","Long green"], answer:0,
+    explain:"A doji — open ≈ close. It signals indecision, not a guaranteed reversal." },
+  { ohlc:{o:65,h:70,l:20,c:68}, q:"Small body up top, long lower wick. What is this?",
+    options:["Long red","Hammer","Doji"], answer:1,
+    explain:"A hammer — price dropped then recovered by the close. Often over-hyped as a 'buy' signal." },
+  { ohlc:{o:30,h:82,l:28,c:80}, q:"Large body, close far above open, tiny wicks. What is this?",
+    options:["Long green (bullish)","Doji","Long red (bearish)"], answer:0,
+    explain:"A long green candle — strong buying that period. It shows the past, not the future." },
+  { ohlc:{o:80,h:82,l:20,c:24}, q:"Large body, close far below open. What is this?",
+    options:["Hammer","Long green","Long red (bearish)"], answer:2,
+    explain:"A long red candle — heavy selling. Records what happened; doesn't reliably predict more selling." },
+];
+
+function Funnel({ onComplete, onAlreadyBought }) {
   const [stage, setStage] = useState("hero"); // hero | quiz | result | buy
   const [qIdx, setQIdx] = useState(0);
   const [answers, setAnswers] = useState([]);
@@ -763,6 +1206,13 @@ function Funnel({ onComplete }) {
           </button>
           <div style={{ fontSize: 11, color: C.dim, fontFamily: C.mono, marginTop: 14 }}>
             Free · no signup · 5 questions
+          </div>
+          <div style={{ fontSize: 12, color: C.dim, marginTop: 18 }}>
+            Already purchased?{" "}
+            <button onClick={onAlreadyBought} style={{
+              background: "none", border: "none", color: C.blue, cursor: "pointer",
+              fontSize: 12, textDecoration: "underline", padding: 0, fontFamily: C.sans,
+            }}>Enter your license key →</button>
           </div>
 
           {/* real customer trust count */}
@@ -1091,6 +1541,11 @@ function LicenseGate({ onUnlock }){
     const k=key.trim();
     if(k.length<8){ setState("error"); setMsg("That doesn't look like a valid key."); return; }
 
+    // TESTING TOGGLE — when TESTING_MODE is true (top of file), the test key
+    // unlocks the app anywhere, including the live site, so you can preview on
+    // your phone. Set TESTING_MODE=false before launch to disable this.
+    if(TESTING_MODE && k === TEST_KEY){ onUnlock({ valid:true, dev:true }); return; }
+
     setState("checking"); setMsg("");
     try{
       const res=await fetch(VALIDATE_URL,{
@@ -1125,6 +1580,11 @@ function LicenseGate({ onUnlock }){
           Hal<span style={{color:C.accent}}>yo</span>
         </div>
         <div style={{fontSize:13,color:C.dim,fontFamily:C.mono,marginBottom:28}}>enter your license key to unlock</div>
+        {TESTING_MODE && (
+          <div style={{background:"rgba(245,158,11,0.12)",border:`1px solid ${C.warn}`,borderRadius:8,padding:"10px 12px",marginBottom:20,fontSize:11.5,color:"#e8c67a",lineHeight:1.5}}>
+            ⚠️ TESTING MODE is ON. Type <strong>{TEST_KEY}</strong> to preview. Turn this off before launch.
+          </div>
+        )}
         <input
           value={key}
           onChange={(e)=>{setKey(e.target.value);setState("idle");}}
@@ -1165,7 +1625,9 @@ export default function App(){
   });
 
   if(flow==="funnel"){
-    return <Funnel onComplete={(profileKey)=>{
+    return <Funnel
+      onAlreadyBought={()=>setFlow("gate")}
+      onComplete={(profileKey)=>{
       // classify() returns lowercase ("balanced"); STRATS keys are capitalized
       // ("Balanced"). Normalize so STRATS[profile] always resolves.
       const norm = typeof profileKey==="string" && profileKey.length
