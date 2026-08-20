@@ -135,14 +135,108 @@ const STRATS={
 };
 
 // ── lessons ──
-const LESSONS=[
-  {t:"What a moving-average crossover is",m:"3 min",body:"A moving average smooths price into a line. A 'fast' one (few days) reacts quickly; a 'slow' one (many days) reacts slowly. When the fast line crosses above the slow line, it's often read as a shift toward an uptrend; crossing below, a downtrend. The strategy buys the up-cross and exits on the down-cross. It's a trend-following idea — it does well in trends and poorly in choppy, sideways markets. No indicator predicts the future; this just reacts to what price has already done."},
-  {t:"Why win rate alone lies to you",m:"4 min",body:"A 60% win rate sounds great, but it's meaningless without knowing the size of wins vs losses. If your average loss is bigger than your average win, you can win 60% of trades and still lose money. The metric that actually matters is expectancy: average profit per trade after costs. Always read win rate next to average win, average loss, and profit factor — never on its own."},
-  {t:"Costs are where edges die",m:"3 min",body:"Every trade pays a spread, a fee, and slippage (the gap between the price you saw and the price you got). On paper a strategy might look profitable; after realistic costs, many aren't. Halyo bakes costs into every number by default. If a strategy only works with costs set to zero, it doesn't work."},
-  {t:"Overfitting: fooling yourself with the past",m:"5 min",body:"If you tune a strategy until its historical results look amazing, you've often just memorized the noise of that specific period — it won't repeat. The defense is out-of-sample testing: optimize on older data, then measure on newer data the strategy never saw. If the out-of-sample result collapses, the strategy was overfit. Trust the test window, never the training window."},
-  {t:"Position sizing & risk per trade",m:"4 min",body:"Surviving is the whole game. A common rule: risk only a small, fixed fraction of your capital on any single trade, so no one loss can hurt you badly. Higher-volatility assets need smaller positions for the same risk. The app shows suggested sizing per setup, but the decision — and the money — are always yours."},
-  {t:"Reading the app's honest signals",m:"3 min",body:"The 'current read' tells you which side of its moving averages price is on right now. That's descriptive, not predictive — it is not a 'buy now' button. Use it as one input among many, alongside the backtested stats and your own judgement. The app never tells you to trade; it shows you what a rule would have done."},
+// ── Guided learning curriculum ──
+// Organised into modules (beginner → applied). Plain-language, honest,
+// evidence-based education. Written so anyone can follow — short paragraphs,
+// concrete analogies, no jargon without explaining it. Deliberately teaches
+// risk-first (how not to blow up) because that's what actually protects people.
+const CURRICULUM=[
+  {
+    module:"1 · Crypto & markets, from zero",
+    blurb:"No prior knowledge needed. What crypto is, how a price is made, and the words you'll keep hearing.",
+    lessons:[
+      {t:"What is cryptocurrency, really?",m:"3 min",body:"Cryptocurrency is digital money that isn't controlled by any bank or government. Instead, a huge shared record (the 'blockchain') is kept by thousands of computers at once, and they all agree on who owns what. Bitcoin was the first; there are now thousands. For a trader, the key point is simpler than the technology: crypto is an asset whose price moves — often violently — because people buy and sell it. You don't need to understand the deep tech to trade it, but you do need to respect how fast it can move."},
+      {t:"How a price actually forms",m:"3 min",body:"A price isn't set by anyone — it's just the last amount someone agreed to pay. At any moment there are buyers (bidding) and sellers (asking). When a buyer accepts a seller's price, a trade happens, and that becomes 'the price.' When more people urgently want to buy, price rises; when more urgently want to sell, it falls. That's it. Every chart you'll ever see is just millions of these little agreements, plotted over time."},
+      {t:"Coins, tokens, and market cap",m:"3 min",body:"Bitcoin and Ethereum have their own blockchains — those are 'coins.' Thousands of smaller projects build on top of existing chains — those are 'tokens.' A useful honesty filter is market cap: price per coin times the number in circulation. A token priced at $0.001 isn't 'cheap' if there are trillions of them — it could still be worth more than Bitcoin in total. Beginners get fooled by low per-coin prices constantly. Always look at the total value, not the sticker price."},
+      {t:"The words you'll keep hearing",m:"4 min",body:"A quick plain-language glossary. Volatility: how wildly price swings (crypto is very high). Liquidity: how easily you can buy/sell without moving the price. Market order: buy/sell right now at whatever price. Limit order: buy/sell only at a price you set. Spread: the small gap between the buy and sell price — a hidden cost. Bull market: prices generally rising; bear market: generally falling. Don't memorise these — you'll absorb them as you go."},
+      {t:"Why crypto is riskier than most markets",m:"3 min",body:"Honest truth up front: crypto moves far more than stocks. A 10–20% move in a day is normal; it can happen while you sleep (crypto trades 24/7). Prices can also be pushed around by hype, rumours, and large holders. This isn't a reason to avoid it — it's a reason to size your risk small and never trade money you can't afford to lose. Everything else in this course builds on that one rule."},
+    ],
+  },
+  {
+    module:"2 · Getting started safely",
+    blurb:"Before any trading: exchanges, wallets, keeping your money secure, and the scams that target beginners.",
+    lessons:[
+      {t:"Exchanges: where you actually buy",m:"3 min",body:"An exchange is a marketplace where you swap regular money for crypto and back. Big, established, regulated exchanges are the sensible starting point — they're more likely to still be there next year and to let you withdraw. Be wary of obscure exchanges promising bonuses; 'we can't process your withdrawal' is a classic trap. Rule of thumb: an exchange you can't easily get your money *out* of is not an exchange, it's a hole."},
+      {t:"Wallets and 'not your keys'",m:"4 min",body:"A wallet holds your crypto. Money left on an exchange is really controlled by the exchange — if it collapses or freezes, your funds can vanish (this has happened repeatedly). A personal wallet gives you a secret 'private key' or 'seed phrase' that only you hold. The saying is 'not your keys, not your coins.' For trading you'll keep some on an exchange for convenience, but understand the trade-off: convenience means trusting someone else with your money."},
+      {t:"Security: protecting yourself",m:"4 min",body:"Crypto is a magnet for theft because transactions can't be reversed. Non-negotiables: use a strong, unique password and two-factor authentication (app-based, not SMS). Never, ever share your seed phrase — no legitimate person or 'support agent' will ever ask for it. Anyone who does is stealing from you. Write your seed phrase on paper, never in a photo or cloud note. Most crypto losses aren't bad trades — they're stolen funds and scams."},
+      {t:"Spotting scams before they get you",m:"5 min",body:"Now the big one. Run from anyone promising guaranteed returns, '90% win rates,' 'signals that can't lose,' or urgency ('buy now or miss out'). Real trading has no certainties — anyone claiming otherwise is selling you something. Be suspicious of screenshots of huge profits (trivially faked), 'gurus' whose real income is course sales, giveaway schemes ('send 1 coin, get 2 back' — always a theft), and romance/'investment mentor' messages. If it sounds too good to be true in crypto, it is — every single time."},
+    ],
+  },
+  {
+    module:"3 · Reading the chart",
+    blurb:"Candlesticks, trends, timeframes, and what price is telling you — without the superstition.",
+    lessons:[
+      {t:"Candlesticks: the four numbers",m:"3 min",body:"Each candle covers one time period and shows four prices: where it Opened, where it Closed, and the Highest and Lowest it reached. The thick 'body' spans open-to-close; the thin 'wicks' reach the high and low. Green means it closed higher than it opened (buyers won that period); red means it closed lower (sellers won). That's the whole language. Open the Candles tab to see this interactively."},
+      {t:"Timeframes change everything",m:"3 min",body:"The same market looks completely different on a 1-hour chart versus a daily or weekly one. A scary 'crash' on the 1-hour chart can be a tiny wiggle on the weekly. Short timeframes are noisier, more stressful, and cost more (you trade more often). Longer timeframes are calmer and cheaper. Beginners almost always trade timeframes that are too short. When in doubt, zoom out — the bigger picture lies to you less."},
+      {t:"What a trend is (and isn't)",m:"3 min",body:"A trend is simply price generally moving one direction over time — higher highs and higher lows for an uptrend, the reverse for a downtrend. Most trading strategies are bets that a trend will continue. The honest catch: you can only ever see a trend clearly in the past. In the moment, you never know if it's continuing or about to reverse. Anyone who says they know is guessing."},
+      {t:"The honest truth about patterns",m:"4 min",body:"You'll see endless content claiming candle patterns (hammers, dojis, engulfing) predict the next move. Here's the honest version: the research is mixed. Some rigorous studies find certain patterns carry a little predictive information; others find essentially none — and critically, studies repeatedly show that whatever small edge exists tends to vanish once real trading costs are included. Learn the patterns so you understand the language traders use, but treat 'this pattern means price will go up' with deep skepticism. The Lab lets you test whether any pattern-based idea actually survives costs."},
+    ],
+  },
+  {
+    module:"4 · The tools traders use",
+    blurb:"Moving averages, RSI, and what makes a complete strategy — explained plainly, tested honestly.",
+    lessons:[
+      {t:"Moving averages: smoothing the noise",m:"4 min",body:"Price is jumpy and hard to read. A moving average smooths it into a line — the average price over the last N days, recalculated each day. A 'fast' average (e.g. 10 days) hugs price closely; a 'slow' one (e.g. 30 days) lags behind. When the fast crosses above the slow, many read it as a possible uptrend starting. It's the backbone of the strategies you'll test. The honest evidence: studies of moving-average rules on crypto are genuinely mixed — some periods and coins show an edge, many don't, and on aggregate they often fail to beat simply holding after costs. It reacts to the past; it never predicts. That's exactly why you test it rather than trust it."},
+      {t:"RSI: measuring momentum",m:"4 min",body:"RSI (Relative Strength Index) is a number from 0 to 100 that measures how fast and far price has moved recently. High readings (often above 70) are called 'overbought,' low ones (below 30) 'oversold.' The common belief is that extremes snap back. Sometimes they do — but in a strong trend, 'overbought' can stay overbought for a long time while price keeps climbing. Like every indicator, it describes the past. Useful context, not a crystal ball. Test it in the Lab."},
+      {t:"What makes a complete strategy",m:"4 min",body:"A real strategy answers four questions, not just one: when do I enter? When do I exit with a profit? When do I exit at a loss? And how much do I risk? Beginners obsess over entries ('when to buy') and ignore the other three — which is exactly backwards. Your exits and your risk size determine your survival far more than your entry. A mediocre entry with great risk management beats a great entry with none."},
+      {t:"Indicators don't predict — they describe",m:"3 min",body:"The single most freeing thing to understand: no indicator predicts the future. Moving averages, RSI, MACD, all of them are just different ways of summarising what price *already did*. They can help you stay disciplined and define rules, but they cannot tell you what happens next — because nothing can. Anyone selling an indicator as a prediction machine is selling a fantasy. Use them as structure, not prophecy."},
+    ],
+  },
+  {
+    module:"5 · Placing trades in the real world",
+    blurb:"Order types, fees, spread and slippage — the practical mechanics that quietly decide if you win.",
+    lessons:[
+      {t:"Market vs limit orders",m:"3 min",body:"A market order buys or sells immediately at whatever price is available — fast, but you take whatever you get. A limit order only executes at a price you set or better — you control the price, but it might never fill. Beginners default to market orders and quietly lose money to bad fills in fast-moving crypto. Learning to use limit orders is one of the simplest ways to stop leaking money on every trade."},
+      {t:"Stop orders: your safety net",m:"3 min",body:"A stop order automatically sells if price falls to a level you set — it's how you cap a loss without watching the screen 24/7. Deciding your stop *before* you enter, when you're calm, is one of the most protective habits in trading. The catch in crypto: violent moves can 'gap' past your stop, so it's a safety net, not a guarantee. Still, having one beats the alternative — hoping a loss comes back while it gets worse."},
+      {t:"Fees, spread, and slippage",m:"4 min",body:"Three costs eat every trade. Fees: what the exchange charges per trade. Spread: the gap between the buy and sell price — you cross it every time. Slippage: getting a slightly worse price than you saw, common in fast markets. Individually tiny; together, and multiplied by frequent trading, they're brutal. This is why overtrading kills accounts. Halyo includes these costs in every backtest by default — because a strategy that ignores them isn't telling the truth."},
+      {t:"Leverage: the fastest way to zero",m:"3 min",body:"Leverage lets you trade with borrowed money — control $1000 with $100. It multiplies gains and losses equally, which sounds fine until you realise a small move against you can wipe out your whole stake ('liquidation'). Most beginners who use leverage lose everything fast. Honest advice: as a beginner, don't. There is no rush that justifies it. Master unleveraged trading first — most people never should touch leverage at all."},
+    ],
+  },
+  {
+    module:"6 · Testing before believing",
+    blurb:"The heart of Halyo: how to check whether an idea actually works — honestly.",
+    lessons:[
+      {t:"What backtesting means",m:"3 min",body:"A backtest asks: 'if I had followed this exact rule over the last two years, what would have happened?' The computer replays history, taking every buy and sell the rule would have made, and tallies the result. It's the single most useful skill in trading — because it replaces 'I think this works' with 'let's check.' But a backtest is only as honest as its assumptions, which the next lessons cover."},
+      {t:"Why 'looked great' usually isn't",m:"4 min",body:"If you adjust a strategy's settings until its past results look amazing, you've usually just fitted it to the random noise of that specific period — a trap called overfitting. It won't repeat. The defence is testing 'out-of-sample': build the idea on older data, then judge it only on newer data it never saw. If the result falls apart on the unseen data, the strategy was fooling you. Always trust the unseen test, never the tuned past."},
+      {t:"Costs: the silent killer of strategies",m:"3 min",body:"Every trade costs you — fees, the spread, and slippage. It sounds tiny, but a strategy that trades often bleeds out through costs. Many strategies that look profitable on paper are losers once realistic costs are included. Halyo includes costs in every result by default. A rule that only works with zero costs doesn't actually work. In the Lab, slide the cost setting up and watch 'winners' turn into losers."},
+      {t:"One good result is not proof",m:"4 min",body:"A strategy that worked in one period might have just been lucky. The stronger test is consistency: does it hold up across many separate time windows, and different assets? If it only worked in one lucky stretch, that's a warning, not a green light. Robustness — working reasonably across many conditions — matters far more than one spectacular result. Halyo's multi-period test is built for exactly this check."},
+      {t:"Comparing against buy-and-hold",m:"3 min",body:"Here's a humbling benchmark every strategy must beat: what if you'd just bought and held? All that trading, all those decisions and costs — did they actually do better than doing nothing? Very often, honestly, they don't. Halyo always shows the buy-and-hold return beside your strategy's. If your clever system can't beat simply holding, that's not a failure of the tool — it's the tool telling you the truth most people never hear."},
+    ],
+  },
+  {
+    module:"7 · Staying alive (risk management)",
+    blurb:"The most important module. Most traders lose — this is how you avoid ruin.",
+    lessons:[
+      {t:"Why survival beats being right",m:"3 min",body:"Here's the most honest thing in this whole course, and it's backed by hard data: most people who trade actively lose money. Regulator and academic studies consistently land in the same range — a landmark study of persistent day traders found around 97% lost money; European regulators' own disclosures show 74–89% of retail CFD/forex traders lose. The traders who last aren't the ones who are right most often — they're the ones who never let a single loss be catastrophic. Your first job isn't to make money; it's to not blow up. Survive, and you get to keep learning. See 'The evidence' at the end of this course for sources."},
+      {t:"Position sizing: the real skill",m:"4 min",body:"Position sizing means deciding how much to put into any single trade. The common rule: risk only a small, fixed fraction of your capital — often 1–2% — on any one trade. That way, even a string of losses can't ruin you. Higher-volatility assets (most crypto) need smaller positions for the same risk. This one habit protects you more than any clever entry signal ever will. Boring? Yes. It's also what keeps you in the game."},
+      {t:"The maths of losing (and recovering)",m:"3 min",body:"Losses hurt more than equal gains help, and the maths is brutal: lose 50% and you need a 100% gain just to break even. Lose 80% and you need 400%. This is exactly why avoiding big losses matters more than chasing big wins — a single oversized loss can undo years of careful gains. Small, controlled losses are survivable; large ones often aren't. Size accordingly."},
+      {t:"Never risk what you can't lose",m:"2 min",body:"The simplest, most important rule, stated plainly: only ever trade with money whose complete loss wouldn't damage your life. Not rent money, not savings you need, never borrowed money. Crypto can and does go to zero. If losing the amount would hurt you, the position is too big — or you shouldn't be in it at all. This isn't cautious pessimism; it's how responsible traders think."},
+    ],
+  },
+  {
+    module:"8 · The mind & the plan",
+    blurb:"Trading is mostly psychology. Here's how to not be your own worst enemy.",
+    lessons:[
+      {t:"Your emotions are the real risk",m:"3 min",body:"The hardest part of trading isn't the charts — it's you. Fear makes people sell at the bottom; greed makes them buy at the top and hold too long. FOMO (fear of missing out) drives chasing pumps that then collapse. Everyone feels these; the difference is whether you act on them. Recognising 'I'm feeling greedy/scared right now' is a genuine trading skill, and often the signal to do nothing."},
+      {t:"Why a written plan protects you",m:"3 min",body:"A trading plan decides — in advance, when you're calm — what you'll do, so you're not making emotional decisions in the heat of a move. It states what you'll trade, how much you'll risk per trade, and when you'll exit (both for profit and for loss). The plan's real job is to protect you from your in-the-moment self. No plan means you'll improvise, and improvising under stress is how accounts get wrecked."},
+      {t:"Keeping a trading journal",m:"3 min",body:"Write down every trade: what you did, why, and how you felt. Over time this becomes the most honest teacher you have — it reveals your real patterns (like always selling too early, or revenge-trading after a loss). Most people never do this, which is why they repeat the same mistakes for years. A journal turns vague experience into concrete, improvable lessons."},
+      {t:"When not to trade",m:"2 min",body:"Doing nothing is a valid, often winning, decision. There's no rule that you must be in a trade. The best traders sit out when conditions are unclear, when they're emotional, tired, or when nothing meets their plan. 'No clear trend — stay in cash' is a legitimate state, not a failure. Overtrading — trading out of boredom or impatience — quietly destroys more accounts than bad analysis does."},
+    ],
+  },
+  {
+    module:"9 · Putting it together with Halyo",
+    blurb:"How to use the tool to turn all this into practice — safely.",
+    lessons:[
+      {t:"How to read Halyo's honest signals",m:"3 min",body:"Halyo's 'current read' just tells you which side of its moving averages price is on right now — descriptive, not a 'buy' button. It's one input, to be weighed alongside the backtested stats and your own judgement. The app deliberately never tells you to trade. Its job is to show you what a rule would have done and let you think for yourself — the opposite of a signal group that tells you to act."},
+      {t:"A sensible way to practise",m:"3 min",body:"Here's an honest path: learn the concepts here, use the Lab to test simple strategies and see how often they fail out-of-sample, and only then — if at all — consider tiny real amounts you can fully afford to lose. Treat your first months as tuition, not income. The goal isn't fast profit; it's becoming someone who understands what they're doing. Most who rush lose; those who learn patiently give themselves a real chance."},
+      {t:"Building your first simple plan",m:"4 min",body:"Put it all together into one page: which asset and timeframe you'll watch, one strategy you've actually tested in the Lab, the fixed small percentage you'll risk per trade, where your stop goes, and the conditions under which you simply won't trade. That's a complete plan — most people never write one. Test it, paper-trade it, journal it. The plan will be boring and modest. Boring and modest is exactly what survives."},
+      {t:"Your honest expectations",m:"2 min",body:"To close, the most honest thing we can tell you, and it's supported by decades of data: most people who trade crypto actively do not beat simply buying and holding, and the majority lose money. That's not meant to discourage you — it's meant to arm you. If you go in expecting a get-rich scheme, you'll be the one who gets hurt. If you go in to learn, manage risk, and make thoughtful decisions, you're already ahead of the crowd. That mindset is the whole point of Halyo. The final lesson lists the research behind these claims."},
+      {t:"The evidence (sources)",m:"3 min",body:"We'd rather show our homework than ask you to trust us. On most traders losing: a widely-cited 2020 study of Brazilian futures day traders who persisted 300+ days found ~97% lost money (Chague, De-Losso & Giovannetti). The European regulator ESMA's mandated broker disclosures show 74–89% of retail CFD/forex accounts lose. India's regulator SEBI found ~89% of individual equity F&O traders lost money (2019–22). On strategies: cryptocurrency moving-average and momentum studies are genuinely mixed — some (e.g. work following Jegadeesh & Titman's momentum research) find an edge in certain assets/periods, while others (e.g. Grobys & Sapkota, 2019) find no significant payoff, and Bessembinder & Chan-style findings show apparent profits often disappear once trading costs are included. That mix is the whole reason Halyo makes you test rather than trust. None of this is financial advice; markets change and past results never guarantee future ones."},
+    ],
+  },
 ];
+// Flat list kept for any legacy reference
+const LESSONS=CURRICULUM.flatMap(m=>m.lessons);
 
 // ── TradingView advanced chart embed ──
 // Loads TradingView's free widget script once and renders the pro chart.
@@ -209,6 +303,13 @@ function TradeApp({ initialProfile = "Balanced" }){
   const [candleQ,setCandleQ]=useState(0);       // current quiz question index
   const [candleAns,setCandleAns]=useState(null); // selected answer for current q
   const [candleScore,setCandleScore]=useState(0);
+
+  // ── Paper practice (simulated trading, fake money) ──
+  const [paperCash,setPaperCash]=useState(10000);       // virtual balance
+  const [paperPos,setPaperPos]=useState(null);          // {entryPrice, units, reason, stop}
+  const [paperLog,setPaperLog]=useState([]);            // closed trades journal
+  const [paperReason,setPaperReason]=useState("");
+  const [paperStop,setPaperStop]=useState("");
 
   const preset=STRATS[profile]||STRATS["Balanced"];
   const [asset,setAsset]=useState(preset.defaultAsset);
@@ -413,7 +514,7 @@ function TradeApp({ initialProfile = "Balanced" }){
           <div style={{display:"flex",alignItems:"center",gap:18}}>
             <span style={{fontSize:18,fontWeight:700,letterSpacing:-0.5}}>Hal<span style={{color:C.accent}}>yo</span></span>
             <div style={{display:"flex",gap:4}}>
-              {["trade","lab","candles","learn"].map(t=>(
+              {["trade","lab","candles","practice","learn"].map(t=>(
                 <button key={t} onClick={()=>setTab(t)} style={{
                   background:tab===t?C.panel:"transparent",color:tab===t?C.text:C.dim,
                   border:`1px solid ${tab===t?C.line:"transparent"}`,borderRadius:6,
@@ -699,7 +800,7 @@ function TradeApp({ initialProfile = "Balanced" }){
           // ── LAB TAB — Simple mode strategy sandbox ──
           <div style={{maxWidth:820,margin:"0 auto"}}>
             <div style={{marginBottom:14}}>
-              <h2 style={{fontSize:24,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px"}}>Strategy Lab</h2>
+              <h2 style={{fontSize:24,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px",color:C.text}}>Strategy Lab</h2>
               <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:0,maxWidth:640}}>
                 Build a strategy and see honestly how it would have performed — after costs, split
                 into what it "trained" on vs. data it never saw. Start Simple, then add complexity.
@@ -862,7 +963,7 @@ function TradeApp({ initialProfile = "Balanced" }){
           // ── CANDLES TAB — anatomy + patterns + quiz ──
           <div style={{maxWidth:820,margin:"0 auto"}}>
             <div style={{marginBottom:20}}>
-              <h2 style={{fontSize:24,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px"}}>Reading candles</h2>
+              <h2 style={{fontSize:24,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px",color:C.text}}>Reading candles</h2>
               <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:0,maxWidth:640}}>
                 Every candle tells you four numbers and one short story. Learn to read them here —
                 honestly, including what they <strong style={{color:C.text}}>can't</strong> tell you.
@@ -958,30 +1059,152 @@ function TradeApp({ initialProfile = "Balanced" }){
               Candles show what happened — never a guarantee of what's next. Educational only, not advice.
             </div>
           </div>
+        ):tab==="practice"?(
+          // ── PRACTICE TAB — paper trading with fake money ──
+          (()=>{
+            const px=lastBar?lastBar.close:null;
+            const posValue=paperPos&&px?paperPos.units*px:0;
+            const equity=paperCash+posValue;
+            const openPnl=paperPos&&px?(px-paperPos.entryPrice)*paperPos.units:0;
+            const openPnlPct=paperPos?((px/paperPos.entryPrice-1)*100):0;
+            const buy=()=>{
+              if(!px||paperPos) return;
+              const spend=paperCash; // simple: go all-in with virtual cash (beginner-friendly)
+              const units=spend/px;
+              setPaperPos({entryPrice:px,units,reason:paperReason||"(no reason given)",stop:paperStop?parseFloat(paperStop):null,openedAt:Date.now()});
+              setPaperCash(0); setPaperReason(""); setPaperStop("");
+            };
+            const sell=()=>{
+              if(!px||!paperPos) return;
+              const proceeds=paperPos.units*px;
+              const pnl=proceeds-(paperPos.units*paperPos.entryPrice);
+              const pnlPct=(px/paperPos.entryPrice-1)*100;
+              setPaperLog(l=>[{asset,entry:paperPos.entryPrice,exit:px,pnl,pnlPct,reason:paperPos.reason,followedStop:paperPos.stop!=null,when:Date.now()},...l].slice(0,30));
+              setPaperCash(proceeds); setPaperPos(null);
+            };
+            const reset=()=>{ setPaperCash(10000); setPaperPos(null); setPaperLog([]); };
+            return (
+            <div style={{maxWidth:760,margin:"0 auto"}}>
+              <div style={{marginBottom:16}}>
+                <h2 style={{fontSize:24,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px",color:C.text}}>Practice with fake money</h2>
+                <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:0,maxWidth:620}}>
+                  The safest way to learn: make pretend trades with $10,000 of fake money, using real {asset} prices.
+                  No real money, no risk — just practise the habits that matter, like writing down <em>why</em> you
+                  bought and setting a limit before you do.
+                </p>
+              </div>
+
+              {/* balance */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:16}}>
+                <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:16}}>
+                  <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1,fontFamily:C.mono}}>Total (fake)</div>
+                  <div style={{fontSize:24,fontFamily:C.mono,fontWeight:700,color:equity>=10000?C.accent:C.danger}}>${equity.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+                  <div style={{fontSize:11,color:C.dim}}>started at $10,000</div>
+                </div>
+                <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:16}}>
+                  <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1,fontFamily:C.mono}}>{asset} price now</div>
+                  <div style={{fontSize:24,fontFamily:C.mono,fontWeight:700,color:C.text}}>{px?`$${px.toLocaleString(undefined,{maximumFractionDigits:dp})}`:"—"}</div>
+                  <div style={{fontSize:11,color:C.dim}}>latest daily close</div>
+                </div>
+              </div>
+
+              {/* action */}
+              {!paperPos?(
+                <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:18,marginBottom:16}}>
+                  <div style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:12}}>Make a practice buy</div>
+                  <div style={{fontSize:12,color:C.dim,marginBottom:6}}>Why are you buying? (Writing this down is the real skill.)</div>
+                  <input value={paperReason} onChange={e=>setPaperReason(e.target.value)} placeholder="e.g. the fast average just crossed above the slow one" style={{width:"100%",boxSizing:"border-box",background:C.panel2,border:`1px solid ${C.line}`,color:C.text,borderRadius:8,padding:"11px 13px",fontSize:14,marginBottom:12,fontFamily:C.sans}}/>
+                  <div style={{fontSize:12,color:C.dim,marginBottom:6}}>At what price would you cut your loss? (Your "stop" — optional but wise.)</div>
+                  <input value={paperStop} onChange={e=>setPaperStop(e.target.value.replace(/[^0-9.]/g,""))} placeholder="e.g. a price below where you bought" style={{width:"100%",boxSizing:"border-box",background:C.panel2,border:`1px solid ${C.line}`,color:C.text,borderRadius:8,padding:"11px 13px",fontSize:14,marginBottom:16,fontFamily:C.sans}}/>
+                  <button onClick={buy} disabled={!px} style={{background:C.accent,color:"#08120a",border:"none",borderRadius:8,padding:"13px 26px",fontSize:15,fontWeight:800,cursor:px?"pointer":"default",opacity:px?1:0.5,width:"100%"}}>Buy {asset} with fake money</button>
+                </div>
+              ):(
+                <div style={{background:C.panel,border:`1.5px solid ${openPnl>=0?C.accent:C.danger}`,borderRadius:12,padding:18,marginBottom:16}}>
+                  <div style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:10}}>You're holding {asset}</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:12}}>
+                    <div><div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1}}>Bought at</div><div style={{fontSize:15,fontFamily:C.mono,color:C.text}}>${paperPos.entryPrice.toLocaleString(undefined,{maximumFractionDigits:dp})}</div></div>
+                    <div><div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1}}>Now</div><div style={{fontSize:15,fontFamily:C.mono,color:C.text}}>${px.toLocaleString(undefined,{maximumFractionDigits:dp})}</div></div>
+                    <div><div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1}}>Profit/loss</div><div style={{fontSize:15,fontFamily:C.mono,fontWeight:700,color:openPnl>=0?C.accent:C.danger}}>{openPnl>=0?"+":""}{openPnlPct.toFixed(1)}%</div></div>
+                  </div>
+                  <div style={{fontSize:12,color:C.dim,marginBottom:6,fontStyle:"italic"}}>Your reason: "{paperPos.reason}"</div>
+                  {paperPos.stop&&<div style={{fontSize:12,color:px<=paperPos.stop?C.danger:C.dim,marginBottom:12}}>Your stop: ${paperPos.stop.toLocaleString()} {px<=paperPos.stop?"— price is at/below your stop. This is where discipline says sell.":""}</div>}
+                  <button onClick={sell} style={{background:openPnl>=0?C.accent:C.danger,color:openPnl>=0?"#08120a":"#fff",border:"none",borderRadius:8,padding:"13px 26px",fontSize:15,fontWeight:800,cursor:"pointer",width:"100%"}}>Sell & close this practice trade</button>
+                </div>
+              )}
+
+              {/* journal */}
+              {paperLog.length>0&&(
+                <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:18,marginBottom:16}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                    <div style={{fontSize:14,fontWeight:700,color:C.text}}>Your practice journal</div>
+                    <button onClick={reset} style={{background:"transparent",border:`1px solid ${C.line}`,color:C.dim,borderRadius:6,padding:"5px 12px",fontSize:11,cursor:"pointer",fontFamily:C.mono}}>Reset</button>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {paperLog.map((tr,i)=>(
+                      <div key={i} style={{background:C.panel2,borderRadius:8,padding:"10px 13px",fontSize:12.5}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                          <span style={{color:C.text,fontWeight:600}}>{tr.asset}</span>
+                          <span style={{fontFamily:C.mono,fontWeight:700,color:tr.pnl>=0?C.accent:C.danger}}>{tr.pnl>=0?"+":""}{tr.pnlPct.toFixed(1)}%</span>
+                        </div>
+                        <div style={{color:C.dim,fontSize:11.5}}>"{tr.reason}"</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{fontSize:11.5,color:C.dim,lineHeight:1.6,marginTop:12,fontStyle:"italic"}}>
+                    Look back at your reasons over time — that's how you spot your own patterns and improve. This is exactly what real traders do in a journal.
+                  </div>
+                </div>
+              )}
+
+              <div style={{fontSize:11,color:C.dim,textAlign:"center",fontFamily:C.mono,lineHeight:1.6,paddingBottom:8}}>
+                Practice only · fake money · real prices · not financial advice. Building good habits here is free — mistakes here cost you nothing.
+              </div>
+            </div>
+            );
+          })()
         ):(
           <div style={{maxWidth:720,margin:"0 auto"}}>
             <div style={{marginBottom:8}}>
-              <h2 style={{fontSize:24,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px"}}>Learn the basics first</h2>
-              <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:0}}>Plain-language lessons. Understand the tool before you risk anything. Tap any lesson to expand.</p>
+              <h2 style={{fontSize:24,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px",color:C.text}}>Learn crypto trading, from zero</h2>
+              <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:0}}>A guided course in plain language — no jargon, no hype. Work through it in order, or jump to what you need. {CURRICULUM.length} modules · {LESSONS.length} short lessons.</p>
             </div>
-            <div style={{marginTop:20,display:"flex",flexDirection:"column",gap:10}}>
-              {LESSONS.map((l,i)=>(
-                <div key={i} style={{background:C.panel,border:`1px solid ${openLesson===i?C.accent:C.line}`,borderRadius:10,overflow:"hidden"}}>
-                  <button onClick={()=>setOpenLesson(openLesson===i?null:i)} style={{width:"100%",background:"transparent",border:"none",padding:"15px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",color:C.text}}>
-                    <div style={{display:"flex",alignItems:"center",gap:14}}>
-                      <span style={{fontFamily:C.mono,fontSize:12,color:C.accent}}>{String(i+1).padStart(2,"0")}</span>
-                      <span style={{fontSize:15,fontWeight:600,textAlign:"left"}}>{l.t}</span>
-                    </div>
-                    <span style={{fontSize:10,fontFamily:C.mono,color:C.dim}}>{l.m} {openLesson===i?"▲":"▼"}</span>
-                  </button>
-                  {openLesson===i&&(
-                    <div style={{padding:"0 18px 18px 44px",fontSize:14,color:C.text,lineHeight:1.7,borderTop:`1px solid ${C.line}`,paddingTop:14,marginTop:0}}>{l.body}</div>
-                  )}
+            <div style={{marginTop:20,display:"flex",flexDirection:"column",gap:22}}>
+              {(()=>{ let running=0; return CURRICULUM.map((mod,mi)=>(
+                <div key={mi}>
+                  <div style={{marginBottom:10}}>
+                    <div style={{fontSize:15,fontWeight:800,color:C.text,letterSpacing:-0.2}}>{mod.module}</div>
+                    <div style={{fontSize:12.5,color:C.dim,lineHeight:1.5,marginTop:3}}>{mod.blurb}</div>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {mod.lessons.map((l)=>{
+                      const idx=running++; // global index for open-state + numbering
+                      const open=openLesson===idx;
+                      return (
+                        <div key={idx} style={{background:C.panel,border:`1px solid ${open?C.accent:C.line}`,borderRadius:10,overflow:"hidden"}}>
+                          <button onClick={()=>setOpenLesson(open?null:idx)} style={{width:"100%",background:"transparent",border:"none",padding:"13px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",color:C.text}}>
+                            <div style={{display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
+                              <span style={{fontFamily:C.mono,fontSize:11,color:C.accent,flexShrink:0}}>{String(idx+1).padStart(2,"0")}</span>
+                              <span style={{fontSize:14.5,fontWeight:600}}>{l.t}</span>
+                            </div>
+                            <span style={{fontSize:10,fontFamily:C.mono,color:C.dim,flexShrink:0,marginLeft:8}}>{l.m} {open?"▲":"▼"}</span>
+                          </button>
+                          {open&&(
+                            <div style={{padding:"0 16px 16px 40px",fontSize:14,color:C.text,lineHeight:1.7,borderTop:`1px solid ${C.line}`,paddingTop:13}}>{l.body}</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              ))}
+              )); })()}
             </div>
-            <div style={{marginTop:24,textAlign:"center"}}>
-              <button onClick={()=>setTab("trade")} style={{background:C.accent,color:"#08120a",border:"none",borderRadius:8,padding:"12px 26px",fontSize:14,fontWeight:700,cursor:"pointer"}}>Go to the strategy →</button>
+            <div style={{marginTop:28,padding:"18px 20px",background:C.panel2,border:`1px solid ${C.line}`,borderRadius:12,textAlign:"center"}}>
+              <div style={{fontSize:14,color:C.text,fontWeight:600,marginBottom:6}}>Finished a module? Put it into practice.</div>
+              <div style={{fontSize:12.5,color:C.dim,lineHeight:1.6,marginBottom:14,maxWidth:520,margin:"0 auto 14px"}}>Reading builds understanding; testing builds judgement. Take what you just learned and try it hands-on in the Lab — that's where it becomes real.</div>
+              <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+                <button onClick={()=>setTab("lab")} style={{background:C.accent,color:"#08120a",border:"none",borderRadius:8,padding:"11px 22px",fontSize:14,fontWeight:700,cursor:"pointer"}}>Try it in the Lab →</button>
+                <button onClick={()=>setTab("candles")} style={{background:"transparent",color:C.text,border:`1px solid ${C.line}`,borderRadius:8,padding:"11px 22px",fontSize:14,fontWeight:600,cursor:"pointer"}}>Practise candles →</button>
+              </div>
             </div>
           </div>
         )}
@@ -1136,7 +1359,7 @@ const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf
 // Real customer count shown on the hero. Update this ONE number as your
 // real total grows (keep it truthful — it reflects actual buyers).
 // Later, this can be replaced with a live count pulled from Lemon Squeezy.
-const CUSTOMER_COUNT = 9851;
+const CUSTOMER_COUNT = 9873;
 
 // ═══════════════════════════════════════════════════════════════
 // ⚠️⚠️⚠️  TESTING TOGGLE — TURN OFF BEFORE LAUNCH  ⚠️⚠️⚠️
@@ -1196,7 +1419,92 @@ const CANDLE_QUIZ = [
     explain:"A long red candle — heavy selling. Records what happened; doesn't reliably predict more selling." },
 ];
 
-function Funnel({ onComplete, onAlreadyBought }) {
+// ── How it works + FAQ (plain language, for the landing page) ──
+const HOW_STEPS=[
+  { n:"1", t:"Take a quick 5-question quiz", d:"It's free and takes about two minutes. It helps figure out where you should start based on how comfortable you are with risk. No sign-up needed." },
+  { n:"2", t:"Learn the basics, step by step", d:"Short, plain-language lessons take you from 'what is crypto' all the way to how trading strategies work. No jargon — everything is explained simply." },
+  { n:"3", t:"Test ideas on real past prices", d:"Try a simple strategy and see how it would have done on real Bitcoin history — including the times it lost. This is where most people have their 'oh, now I get it' moment." },
+  { n:"4", t:"Practise before using real money", d:"Get comfortable and build good habits first. Halyo never tells you to buy or sell — it helps you understand, so any decision you make is your own." },
+];
+const FAQS=[
+  { q:"Do I need any experience with crypto or trading?", a:"No. Halyo is built for complete beginners. It starts from the very basics — what crypto even is — and explains everything in simple, everyday language. If you've never traded before, this is made for you." },
+  { q:"Is this financial advice? Will it tell me what to buy?", a:"No, and that's on purpose. Halyo is a learning tool. It never tells you to buy or sell anything. Instead, it teaches you how things work and lets you test ideas yourself, so you can make your own informed decisions. Anyone who promises you what to buy is best avoided." },
+  { q:"Will this make me money?", a:"We won't promise that — because no honest tool can. The truth is most people who trade actively lose money. Halyo's job is to help you learn, understand the real risks, and avoid common mistakes. It's about becoming smarter and more careful, not getting rich quick." },
+  { q:"What exactly do I get for $39?", a:"A one-time payment (not a subscription) gives you lifetime access on desktop and mobile: the full set of lessons, the tool to test strategies on real data, candle-reading practice, live charts, and all future updates at no extra cost." },
+  { q:"Is $39 a one-time cost or a subscription?", a:"One-time. You pay once and it's yours, including future updates. No monthly fees, no surprises." },
+  { q:"Can I try it before I buy?", a:"Yes. There's a free demo where you can test a simple Bitcoin strategy and see how the tool works — no sign-up, no payment. It's a small taste of the full version." },
+  { q:"What if it's not for me?", a:"If it's not a fit, just email support@halyoapp.com and we'll help. We'd rather you be happy than stuck with something you don't use." },
+  { q:"Is my money safe? Does Halyo touch my crypto?", a:"Halyo never touches your money or your crypto. It doesn't connect to any exchange or wallet, and it can't place trades. It's purely a place to learn and test — completely separate from where you'd actually buy anything." },
+  { q:"Do I need to install anything?", a:"No. Halyo runs in your web browser on your phone or computer. You can also add it to your home screen so it feels like an app." },
+];
+let _faqOpen = null; // survives remounts
+const HalyoFaq = React.memo(function HalyoFaq(){
+  const [open,setOpenState]=useState(_faqOpen);
+  const setOpen=(v)=>{ _faqOpen=v; setOpenState(v); };
+  return (
+    <div style={{maxWidth:680,margin:"64px auto 0"}}>
+      {/* how it works */}
+      <div style={{textAlign:"center",marginBottom:8}}>
+        <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>How Halyo works</div>
+        <h2 style={{fontSize:26,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px",color:C.text}}>Four simple steps</h2>
+        <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:"0 auto",maxWidth:520}}>No jargon, no pressure. Just a clear path from knowing nothing to understanding what you're doing.</p>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12,margin:"24px 0 48px"}}>
+        {HOW_STEPS.map((s)=>(
+          <div key={s.n} style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"18px 18px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+              <span style={{width:28,height:28,borderRadius:"50%",background:C.accent,color:"#08120a",fontWeight:800,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{s.n}</span>
+              <span style={{fontSize:15,fontWeight:700,color:C.text}}>{s.t}</span>
+            </div>
+            <p style={{fontSize:13,color:C.dim,lineHeight:1.6,margin:0}}>{s.d}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* FAQ */}
+      <div style={{textAlign:"center",marginBottom:8}}>
+        <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>Common questions</div>
+        <h2 style={{fontSize:26,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px",color:C.text}}>Honest answers</h2>
+        <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:"0 auto 4px",maxWidth:520}}>Tap any question to see the answer.</p>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:20}}>
+        {FAQS.map((f,i)=>(
+          <div key={i} style={{background:C.panel,border:`1px solid ${open===i?C.accent:C.line}`,borderRadius:10,overflow:"hidden"}}>
+            <button onClick={()=>setOpen(open===i?null:i)} style={{width:"100%",background:"transparent",border:"none",padding:"15px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,cursor:"pointer",color:C.text,textAlign:"left"}}>
+              <span style={{fontSize:14.5,fontWeight:600}}>{f.q}</span>
+              <span style={{fontSize:16,color:C.accent,flexShrink:0}}>{open===i?"–":"+"}</span>
+            </button>
+            {open===i&&(
+              <div style={{padding:"0 18px 18px",fontSize:14,color:C.text,lineHeight:1.7,borderTop:`1px solid ${C.line}`,paddingTop:14}}>{f.a}</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
+
+// Funnel page shell — module-level so it stays stable across re-renders
+// (defining it inside Funnel would remount the whole tree every render,
+// resetting child state like the FAQ's open answer).
+const Shell = ({ children }) => (
+  <div style={{ background: C.bg, minHeight: "100vh", color: C.text, fontFamily: C.sans }}>
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: "22px 22px 60px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: -0.5 }}>
+          Hal<span style={{ color: C.accent }}>yo</span>
+        </span>
+        <span style={{ fontSize: 10, color: C.dim, fontFamily: C.mono, letterSpacing: 0.5 }}>
+          backtest · analyze · decide
+        </span>
+      </div>
+      <div style={{ height: 1, background: C.line, marginBottom: 28 }} />
+      {children}
+    </div>
+  </div>
+);
+
+function Funnel({ onComplete, onAlreadyBought, onDemo }) {
   const [stage, setStage] = useState("hero"); // hero | quiz | result | buy
   const [qIdx, setQIdx] = useState(0);
   const [answers, setAnswers] = useState([]);
@@ -1240,23 +1548,6 @@ function Funnel({ onComplete, onAlreadyBought }) {
     </div>
   );
 
-  const Shell = ({ children }) => (
-    <div style={{ background: C.bg, minHeight: "100vh", color: C.text, fontFamily: C.sans }}>
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "22px 22px 60px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: -0.5 }}>
-            Hal<span style={{ color: C.accent }}>yo</span>
-          </span>
-          <span style={{ fontSize: 10, color: C.dim, fontFamily: C.mono, letterSpacing: 0.5 }}>
-            backtest · analyze · decide
-          </span>
-        </div>
-        <div style={{ height: 1, background: C.line, marginBottom: 28 }} />
-        {children}
-      </div>
-    </div>
-  );
-
   // ── HERO ──
   if (stage === "hero") {
     return (
@@ -1265,32 +1556,48 @@ function Funnel({ onComplete, onAlreadyBought }) {
           <div style={{ fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>
             Learn crypto trading without the hype
           </div>
-          <h1 style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.5, margin: "0 0 18px", maxWidth: 680, marginLeft: "auto", marginRight: "auto" }}>
-            See how crypto strategies{" "}
-            <span style={{ color: C.accent }}>really perform — before you risk anything.</span>
+          <h1 style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.5, margin: "0 0 18px", maxWidth: 680, marginLeft: "auto", marginRight: "auto", color: C.text }}>
+            Learn crypto the honest way —{" "}
+            <span style={{ color: C.accent }}>before you risk a single dollar.</span>
           </h1>
-          <p style={{ fontSize: 16, color: C.dim, lineHeight: 1.6, maxWidth: 560, margin: "0 auto 32px" }}>
-            Halyo is a learning tool and strategy reality-checker. Take the 2-minute risk
-            assessment to find where to start, then learn to read strategies and see honestly
-            how they hold up on real data — costs, drawdowns, and all. No signals to follow,
-            no promises. Just clear thinking about crypto.
+          <p style={{ fontSize: 17, color: C.dim, lineHeight: 1.6, maxWidth: 560, margin: "0 auto 14px" }}>
+            Most crypto apps promise you'll get rich. We won't. Halyo teaches you how trading
+            really works — in plain, simple words anyone can follow — and lets you test ideas on
+            real prices to see what actually happens. No hype. No pressure. Just the truth.
           </p>
-          <button onClick={() => { track("StartQuiz"); setStage("quiz"); }} style={{
-            background: C.accent, color: "#08120a", border: "none", borderRadius: 8,
-            padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer",
-            fontFamily: C.sans, letterSpacing: 0.2,
-          }}>
-            Start the risk assessment →
-          </button>
-          <div style={{ fontSize: 11, color: C.dim, fontFamily: C.mono, marginTop: 14 }}>
-            Free · no signup · 5 questions
+          <p style={{ fontSize: 14, color: C.accent, lineHeight: 1.6, maxWidth: 520, margin: "0 auto 30px", fontWeight: 600 }}>
+            Try it free right now — no signup, no card, no catch.
+          </p>
+
+          {/* PRIMARY opt-in: the free demo (lowest-commitment) */}
+          <div style={{ position:"relative", zIndex:2 }}>
+            <button onClick={onDemo} style={{
+              background: C.accent, color: "#08120a", border: "none", borderRadius: 8,
+              padding: "16px 36px", fontSize: 16, fontWeight: 800, cursor: "pointer",
+              fontFamily: C.sans, letterSpacing: 0.2,
+            }}>
+              Try the free demo →
+            </button>
+          </div>
+          <div style={{ fontSize: 12, color: C.dim, fontFamily: C.mono, marginTop: 12 }}>
+            Test a real Bitcoin strategy in 30 seconds · nothing to install
+          </div>
+
+          {/* SECONDARY: the guided quiz */}
+          <div style={{ marginTop: 22 }}>
+            <button onClick={() => { track("StartQuiz"); setStage("quiz"); }} style={{
+              background: "transparent", color: C.text, border: `1px solid ${C.line}`, borderRadius: 8,
+              padding: "12px 26px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: C.sans,
+            }}>
+              Or take the 2-minute "where do I start?" quiz →
+            </button>
           </div>
           <div style={{ fontSize: 12, color: C.dim, marginTop: 18 }}>
-            Already purchased?{" "}
+            Already bought Halyo?{" "}
             <button onClick={onAlreadyBought} style={{
               background: "none", border: "none", color: C.blue, cursor: "pointer",
               fontSize: 12, textDecoration: "underline", padding: 0, fontFamily: C.sans,
-            }}>Enter your license key →</button>
+            }}>Enter your key →</button>
           </div>
 
           {/* real customer trust count */}
@@ -1316,9 +1623,9 @@ function Funnel({ onComplete, onAlreadyBought }) {
         {/* honest value props */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginTop: 48 }}>
           {[
-            { k: "01", t: "Costs included", d: "Every win rate is measured after fees and slippage — the number most tools hide." },
-            { k: "02", t: "Out-of-sample only", d: "Results shown on data the strategy never trained on. No flattering hindsight." },
-            { k: "03", t: "No execution", d: "We don't touch your money or place trades. You trade on your own exchange." },
+            { k: "01", t: "Real costs included", d: "Every result counts the fees you'd actually pay — the part most apps quietly leave out to look good." },
+            { k: "02", t: "Tested on unseen data", d: "We check strategies on prices they've never seen — so the results aren't just cherry-picked hindsight." },
+            { k: "03", t: "We never touch your money", d: "Halyo can't trade or hold your crypto. It's just a safe place to learn and practise." },
           ].map((f) => (
             <div key={f.k} style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 10, padding: 18 }}>
               <div style={{ fontFamily: C.mono, fontSize: 12, color: C.accent, marginBottom: 10 }}>{f.k}</div>
@@ -1369,6 +1676,9 @@ function Funnel({ onComplete, onAlreadyBought }) {
             ))}
           </div>
         </div>
+
+        {/* how it works + FAQ */}
+        <HalyoFaq />
 
         {/* founder note */}
         <div style={{ marginTop: 56, background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 14, padding: "28px 26px", maxWidth: 680, margin: "56px auto 0" }}>
@@ -1424,7 +1734,7 @@ function Funnel({ onComplete, onAlreadyBought }) {
           <div style={{ fontSize: 11, fontFamily: C.mono, color: C.dim, marginBottom: 14, letterSpacing: 1 }}>
             QUESTION {qIdx + 1} / {QUESTIONS.length}
           </div>
-          <h2 style={{ fontSize: 26, fontWeight: 700, lineHeight: 1.25, letterSpacing: -0.5, margin: "0 0 28px" }}>
+          <h2 style={{ fontSize: 26, fontWeight: 700, lineHeight: 1.25, letterSpacing: -0.5, margin: "0 0 28px", color: C.text }}>
             {question.q}
           </h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1525,7 +1835,7 @@ function Funnel({ onComplete, onAlreadyBought }) {
         <div style={{ fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>
           The {profile.name} plan · built for your profile
         </div>
-        <h2 style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1, margin: "0 0 8px" }}>
+        <h2 style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1, margin: "0 0 8px", color: C.text }}>
           Everything to trade your match with discipline
         </h2>
       </div>
@@ -1686,6 +1996,172 @@ function LicenseGate({ onUnlock }){
 }
 
 // ═══════════════════════════════════════════════════════════
+// FREE PUBLIC DEMO — reachable at ?demo=1, no login/payment.
+// One asset (BTC), simple MA backtest, honest verdict. Point ads here.
+// ═══════════════════════════════════════════════════════════
+function DemoLab({ onExit }){
+  const [fast,setFast]=useState(10);
+  const [slow,setSlow]=useState(30);
+  const [data,setData]=useState([]);
+  const [loadState,setLoadState]=useState("loading"); // loading | ok | error
+
+  useEffect(()=>{
+    let alive=true;
+    (async()=>{
+      // Binance daily klines for BTC (OHLC so the backtest is honest)
+      try{
+        const r=await fetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=730");
+        if(!r.ok) throw new Error("binance");
+        const rows=await r.json();
+        if(!alive) return;
+        setData(rows.map((k,i)=>({i,t:k[0],open:parseFloat(k[1]),close:parseFloat(k[4])})));
+        setLoadState("ok");
+      }catch(e){
+        // fallback: CoinGecko close-only
+        try{
+          const r2=await fetch("https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=730&interval=daily");
+          if(!r2.ok) throw new Error("cg");
+          const j=await r2.json();
+          if(!alive) return;
+          setData(j.prices.map((p,i)=>({i,t:p[0],close:p[1]})));
+          setLoadState("ok");
+        }catch(e2){ if(alive) setLoadState("error"); }
+      }
+    })();
+    return ()=>{alive=false;};
+  },[]);
+
+  const split=Math.floor(data.length*0.65);
+  const cfg={fast,slow,rsiFloor:30,rsiCeil:70,costBps:10,slipBps:5,useRsi:false};
+  const train=useMemo(()=>data.length?runBacktest(data.slice(0,split),cfg):null,[data,split,fast,slow]);
+  const test=useMemo(()=>data.length?runBacktest(data.slice(split),cfg):null,[data,split,fast,slow]);
+  const full=useMemo(()=>data.length?runBacktest(data,cfg):null,[data,fast,slow]);
+
+  const verdict=useMemo(()=>{
+    if(!train||!test) return null;
+    const tr=train.metrics.totalReturn, te=test.metrics.totalReturn, bh=full?.metrics.buyHold??0;
+    if((test.metrics.nTrades||0)<4) return {tone:C.dim,text:"Very few trades on the unseen data — not enough to judge. Try different averages."};
+    if(tr>0.15 && te<=0) return {tone:C.danger,text:"Classic overfitting: it looked strong on the data it was built around, but lost on data it never saw. Looking good on the past doesn't mean it works ahead — the trap most 'winning' strategies fall into."};
+    if(te>0 && te<bh) return {tone:C.warn,text:"It made money on unseen data — but less than simply buying and holding would have. After all that effort, doing nothing beat it."};
+    if(te>0 && te>=bh) return {tone:C.accent,text:"It held up on unseen data and beat buy-and-hold here. Encouraging — but one asset, one window isn't proof. The full Lab lets you test costs, filters, and other coins to see if it survives."};
+    return {tone:C.warn,text:"Modest or negative on unseen data — the honest norm. Most simple strategies don't beat the market after costs. Seeing that clearly is the whole point."};
+  },[train,test,full]);
+
+  const equity=useMemo(()=>(train&&test)?[...train.equitySeries,...test.equitySeries]:[],[train,test]);
+
+  const Lock=({children})=>(
+    <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontFamily:C.mono,color:C.dim}}>
+      <span style={{fontSize:11}}>🔒</span>{children}
+    </span>
+  );
+
+  return (
+    <div style={{background:C.bg,minHeight:"100vh",color:C.text,fontFamily:C.sans}}>
+      <div style={{maxWidth:820,margin:"0 auto",padding:"20px 18px 60px"}}>
+        {/* header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:22,fontWeight:800,letterSpacing:-0.5}}>Hal<span style={{color:C.accent}}>yo</span> <span style={{fontSize:12,fontFamily:C.mono,color:C.dim,fontWeight:400}}>· free demo</span></div>
+          <button onClick={()=>{window.location.href="/";}} style={{background:"transparent",border:`1px solid ${C.line}`,color:C.dim,borderRadius:8,padding:"7px 14px",fontSize:12,cursor:"pointer"}}>Home</button>
+        </div>
+
+        <div style={{marginBottom:18}}>
+          <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>Try it free · no signup</div>
+          <h1 style={{fontSize:30,fontWeight:800,letterSpacing:-1,margin:"0 0 8px",color:C.text,lineHeight:1.15}}>Test a Bitcoin strategy on real data</h1>
+          <p style={{fontSize:14.5,color:C.dim,lineHeight:1.6,margin:0,maxWidth:620}}>
+            Build a simple moving-average strategy and see honestly how it would have performed on real BTC history — split into what it "trained" on vs. data it never saw. This is a taste of the full Strategy Lab.
+          </p>
+        </div>
+
+        {loadState==="error"?(
+          <div style={{textAlign:"center",padding:40,color:C.dim,fontFamily:C.mono,fontSize:13}}>Couldn't load market data right now — please try again shortly.</div>
+        ):loadState==="loading"?(
+          <div style={{textAlign:"center",padding:40,color:C.dim,fontFamily:C.mono,fontSize:13}}>Loading real BTC data…</div>
+        ):(
+          <>
+            {/* controls */}
+            <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"18px",marginBottom:16}}>
+              <div style={{display:"flex",flexWrap:"wrap",gap:20,alignItems:"flex-end"}}>
+                <div style={{padding:"6px 12px",background:C.panel2,border:`1px solid ${C.line}`,borderRadius:6,fontSize:13,fontFamily:C.mono}}>BTC/USD</div>
+                <div style={{flex:"1 1 200px"}}>
+                  <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Fast MA — <span style={{color:C.accent}}>{fast} days</span></div>
+                  <input type="range" min={2} max={50} value={fast} onChange={e=>setFast(Math.min(+e.target.value,slow-1))} style={{width:"100%",accentColor:C.accent}}/>
+                </div>
+                <div style={{flex:"1 1 200px"}}>
+                  <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Slow MA — <span style={{color:C.blue}}>{slow} days</span></div>
+                  <input type="range" min={5} max={120} value={slow} onChange={e=>setSlow(Math.max(+e.target.value,fast+1))} style={{width:"100%",accentColor:C.blue}}/>
+                </div>
+              </div>
+              <div style={{fontSize:11,color:C.dim,marginTop:12,lineHeight:1.5}}>When the {fast}-day average crosses above the {slow}-day, the strategy buys; when it crosses below, it sells. Drag to explore.</div>
+            </div>
+
+            {/* results */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12,marginBottom:16}}>
+              <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:18}}>
+                <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>In-sample (trained on)</div>
+                {[["Return",fmtPct(train?.metrics.totalReturn),train?.metrics.totalReturn>0?C.accent:C.danger],["Win rate",fmtPct(train?.metrics.winRate),null],["Worst dip",fmtPct(train?.metrics.maxDD),C.danger],["Trades",train?.metrics.nTrades??"—",null]].map(([l,v,t],i)=>(
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${C.line}`}}><span style={{fontSize:12,color:C.dim}}>{l}</span><span style={{fontSize:16,fontFamily:C.mono,fontWeight:600,color:t||C.text}}>{v}</span></div>
+                ))}
+              </div>
+              <div style={{background:C.panel,border:`1.5px solid ${C.accent}`,borderRadius:12,padding:18}}>
+                <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Out-of-sample (never seen) ★</div>
+                {[["Return",fmtPct(test?.metrics.totalReturn),test?.metrics.totalReturn>0?C.accent:C.danger],["Win rate",fmtPct(test?.metrics.winRate),null],["Worst dip",fmtPct(test?.metrics.maxDD),C.danger],["Trades",test?.metrics.nTrades??"—",null]].map(([l,v,t],i)=>(
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${C.line}`}}><span style={{fontSize:12,color:C.dim}}>{l}</span><span style={{fontSize:16,fontFamily:C.mono,fontWeight:600,color:t||C.text}}>{v}</span></div>
+                ))}
+              </div>
+            </div>
+
+            {verdict&&(
+              <div style={{background:C.panel,border:`1px solid ${verdict.tone}`,borderRadius:10,padding:"14px 16px",marginBottom:16}}>
+                <div style={{fontSize:10,fontFamily:C.mono,letterSpacing:1.5,textTransform:"uppercase",color:verdict.tone,marginBottom:6}}>What this result is telling you</div>
+                <div style={{fontSize:13.5,color:C.text,lineHeight:1.6}}>{verdict.text}</div>
+                <div style={{fontSize:11.5,color:C.dim,marginTop:8}}>For reference, simply holding BTC over this period returned {fmtPct(full?.metrics.buyHold)}.</div>
+              </div>
+            )}
+
+            {/* equity chart */}
+            <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"16px 12px 8px",marginBottom:24}}>
+              <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:8,paddingLeft:8}}>Equity curve · train → test</div>
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={equity}>
+                  <defs><linearGradient id="demoEq" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.accent} stopOpacity={0.4}/><stop offset="100%" stopColor={C.accent} stopOpacity={0}/></linearGradient></defs>
+                  <XAxis dataKey="t" tickFormatter={fmtDate} tick={{fontSize:10,fill:C.dim}} minTickGap={40}/>
+                  <YAxis tick={{fontSize:10,fill:C.dim}} width={40} domain={["auto","auto"]}/>
+                  <Tooltip contentStyle={{background:C.panel2,border:`1px solid ${C.line}`,borderRadius:8,fontSize:12}} labelFormatter={fmtDate} formatter={(v)=>[fmtNum(v),"equity"]}/>
+                  {data[split]&&<ReferenceLine x={data[split].t} stroke={C.blue} strokeDasharray="4 4" label={{value:"test →",fill:C.blue,fontSize:10}}/>}
+                  <Area type="monotone" dataKey="equity" stroke={C.accent} strokeWidth={2} fill="url(#demoEq)"/>
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* upgrade CTA — the natural gap */}
+            <div style={{background:`linear-gradient(180deg, ${C.panel}, ${C.panel2})`,border:`1px solid ${C.accent}`,borderRadius:14,padding:"24px 22px",textAlign:"center"}}>
+              <div style={{fontSize:19,fontWeight:800,color:C.text,marginBottom:6}}>Liked that? This is 5% of Halyo.</div>
+              <div style={{fontSize:13.5,color:C.dim,lineHeight:1.6,maxWidth:560,margin:"0 auto 16px"}}>
+                The full tool unlocks everything the demo holds back — so you can really learn, not just peek.
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:10,justifyContent:"center",marginBottom:20}}>
+                <Lock>4 assets (ETH, SOL, BNB…)</Lock>
+                <Lock>RSI, cost & trend filters</Lock>
+                <Lock>Multi-period robustness test</Lock>
+                <Lock>Live TradingView charts</Lock>
+                <Lock>Candle-reading course</Lock>
+                <Lock>37-lesson curriculum</Lock>
+              </div>
+              <a href="/" style={{display:"inline-block",background:C.accent,color:"#08120a",textDecoration:"none",borderRadius:8,padding:"13px 30px",fontSize:15,fontWeight:800}}>Get the full Halyo — $39 →</a>
+              <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,marginTop:12}}>one-time · lifetime license · learn before you risk</div>
+            </div>
+
+            <div style={{fontSize:11,color:C.dim,textAlign:"center",fontFamily:C.mono,lineHeight:1.6,marginTop:20}}>
+              Educational demo · results are historical, after costs · not financial advice · a good backtest never guarantees future results.
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
 // ROOT: funnel (free) → payment → license gate → app.
 // ═══════════════════════════════════════════════════════════
 export default function App(){
@@ -1697,14 +2173,21 @@ export default function App(){
   //  - otherwise → the funnel (new visitor)
   const [savedKey]=useState(()=>{ try{ return window.localStorage.getItem("halyo_license"); }catch(e){ return null; } });
   const [flow,setFlow]=useState(()=>{
+    // ?demo=1 → free public demo (no login, no payment) — point ads here
+    try{ if(new URLSearchParams(window.location.search).get("demo")) return "demo"; }catch(e){}
     if(savedKey) return "app";
     try{ if(new URLSearchParams(window.location.search).get("unlock")) return "gate"; }catch(e){}
     return "funnel";
   });
 
+  if(flow==="demo"){
+    return <DemoLab onExit={()=>setFlow("funnel")} />;
+  }
+
   if(flow==="funnel"){
     return <Funnel
       onAlreadyBought={()=>setFlow("gate")}
+      onDemo={()=>setFlow("demo")}
       onComplete={(profileKey)=>{
       // classify() returns lowercase ("balanced"); STRATS keys are capitalized
       // ("Balanced"). Normalize so STRATS[profile] always resolves.
