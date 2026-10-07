@@ -390,6 +390,11 @@ function TradeApp({ initialProfile = "Balanced" }){
   const [candleAns,setCandleAns]=useState(null); // selected answer for current q
   const [candleScore,setCandleScore]=useState(0);
 
+  // ── Coins tab state (search + which coin is expanded) ──
+  const [coinQuery,setCoinQuery]=useState("");
+  const [coinOpen,setCoinOpen]=useState(null);
+  const [coinRisk,setCoinRisk]=useState("all"); // all | high | very high | medium-high
+
   // ── Paper practice (simulated trading, fake money) ──
   const [paperCash,setPaperCash]=useState(10000);       // virtual balance
   const [paperPos,setPaperPos]=useState(null);          // {entryPrice, units, reason, stop}
@@ -895,41 +900,74 @@ function TradeApp({ initialProfile = "Balanced" }){
 
             {/* honest banner */}
             <div style={{background:"rgba(245,158,11,0.06)",border:`1px solid rgba(245,158,11,0.22)`,borderRadius:10,padding:"11px 14px",marginBottom:16,fontSize:12,color:"#e8c67a",lineHeight:1.55}}>
-              <strong style={{color:C.warn}}>Honest note:</strong> This is background to help you understand each project — not a recommendation to buy any of them. All AI coins are highly volatile and can fall sharply. Facts below are current as of {COIN_GUIDE_ASOF}; for live prices and news, use the links on each card.
+              <strong style={{color:C.warn}}>Honest note:</strong> Background to help you understand each project — not a recommendation to buy. All AI coins are highly volatile and can fall sharply. Facts current as of {COIN_GUIDE_ASOF}; tap a coin for the live-price link.
             </div>
 
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              {Object.keys(COINS).map((k)=>{
-                const c=COINS[k], g=COIN_GUIDE[k];
-                if(!g) return null;
-                const riskColor = g.risk==="very high"?C.danger : g.risk==="high"?C.warn : C.blue;
-                return (
-                  <div key={k} style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:18}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:12}}>
-                      <div>
-                        <div style={{fontSize:17,fontWeight:800,color:C.text}}>{c.name} <span style={{fontSize:13,fontFamily:C.mono,color:C.dim,fontWeight:400}}>{k.replace("/USD","")}</span></div>
-                        <div style={{fontSize:12,color:C.dim,marginTop:2}}>{c.note}</div>
-                      </div>
-                      <div style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:10,fontFamily:C.mono,color:riskColor,border:`1px solid ${riskColor}`,borderRadius:6,padding:"3px 9px",textTransform:"uppercase",letterSpacing:1,whiteSpace:"nowrap"}}>
-                        Risk: {g.risk}
-                      </div>
-                    </div>
-
-                    <div style={{display:"flex",flexDirection:"column",gap:9,fontSize:13.5,lineHeight:1.6}}>
-                      <div><span style={{color:C.accent,fontWeight:700}}>What it is — </span><span style={{color:C.text}}>{g.what}</span></div>
-                      <div><span style={{color:C.accent,fontWeight:700}}>Who's behind it — </span><span style={{color:C.text}}>{g.who}</span></div>
-                      <div><span style={{color:C.accent,fontWeight:700}}>The use case — </span><span style={{color:C.text}}>{g.use}</span></div>
-                      <div><span style={{color:C.accent,fontWeight:700}}>Honest take — </span><span style={{color:C.dim}}>{g.context}</span></div>
-                    </div>
-
-                    <div style={{display:"flex",gap:14,marginTop:14,flexWrap:"wrap"}}>
-                      <a href={`https://www.coingecko.com/en/coins/${c.id}`} target="_blank" rel="noopener" style={{fontSize:12,fontFamily:C.mono,color:C.blue,textDecoration:"underline"}}>Live price & news ↗</a>
-                      <button onClick={()=>{setAsset(k);setTab("trade");}} style={{background:"transparent",border:"none",padding:0,fontSize:12,fontFamily:C.mono,color:C.accent,textDecoration:"underline",cursor:"pointer"}}>See the chart →</button>
-                    </div>
-                  </div>
-                );
-              })}
+            {/* search + risk filter */}
+            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:14,alignItems:"center"}}>
+              <input
+                value={coinQuery}
+                onChange={e=>setCoinQuery(e.target.value)}
+                placeholder="Search a coin (e.g. Render, TAO)…"
+                style={{flex:"1 1 200px",background:C.panel2,border:`1px solid ${C.line}`,color:C.text,borderRadius:8,padding:"10px 13px",fontSize:14,fontFamily:C.sans}}
+              />
+              <select value={coinRisk} onChange={e=>setCoinRisk(e.target.value)} style={{background:C.panel2,color:C.text,border:`1px solid ${C.line}`,borderRadius:8,padding:"10px 12px",fontSize:13,fontFamily:C.mono,cursor:"pointer"}}>
+                <option value="all">All risk levels</option>
+                <option value="medium-high">Medium-high</option>
+                <option value="high">High</option>
+                <option value="very high">Very high</option>
+              </select>
             </div>
+
+            {(()=>{
+              const q=coinQuery.trim().toLowerCase();
+              const rows=Object.keys(COINS).filter((k)=>{
+                const c=COINS[k], g=COIN_GUIDE[k]; if(!g) return false;
+                if(coinRisk!=="all" && g.risk!==coinRisk) return false;
+                if(!q) return true;
+                return (c.name.toLowerCase().includes(q) || k.toLowerCase().includes(q) || (c.note||"").toLowerCase().includes(q));
+              });
+              if(rows.length===0) return <div style={{textAlign:"center",padding:30,color:C.dim,fontFamily:C.mono,fontSize:13}}>No coins match. Try a different search or filter.</div>;
+              return (
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {rows.map((k)=>{
+                    const c=COINS[k], g=COIN_GUIDE[k];
+                    const open=coinOpen===k;
+                    const riskColor = g.risk==="very high"?C.danger : g.risk==="high"?C.warn : C.blue;
+                    return (
+                      <div key={k} style={{background:C.panel,border:`1px solid ${open?C.accent:C.line}`,borderRadius:12,overflow:"hidden"}}>
+                        {/* compact clickable header */}
+                        <button onClick={()=>setCoinOpen(open?null:k)} style={{width:"100%",background:"transparent",border:"none",padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,cursor:"pointer",color:C.text,textAlign:"left"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+                            <span style={{fontSize:15,fontWeight:700,color:C.text,whiteSpace:"nowrap"}}>{c.name}</span>
+                            <span style={{fontSize:12,fontFamily:C.mono,color:C.dim}}>{k.replace("/USD","")}</span>
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+                            <span style={{fontSize:9,fontFamily:C.mono,color:riskColor,border:`1px solid ${riskColor}`,borderRadius:5,padding:"2px 7px",textTransform:"uppercase",letterSpacing:0.5,whiteSpace:"nowrap"}}>{g.risk}</span>
+                            <span style={{fontSize:13,color:C.accent}}>{open?"–":"+"}</span>
+                          </div>
+                        </button>
+                        {open&&(
+                          <div style={{padding:"0 16px 16px",borderTop:`1px solid ${C.line}`,paddingTop:13}}>
+                            <div style={{fontSize:12.5,color:C.dim,marginBottom:10}}>{c.note}</div>
+                            <div style={{display:"flex",flexDirection:"column",gap:8,fontSize:13.5,lineHeight:1.6}}>
+                              <div><span style={{color:C.accent,fontWeight:700}}>What it is — </span><span style={{color:C.text}}>{g.what}</span></div>
+                              <div><span style={{color:C.accent,fontWeight:700}}>Who's behind it — </span><span style={{color:C.text}}>{g.who}</span></div>
+                              <div><span style={{color:C.accent,fontWeight:700}}>The use case — </span><span style={{color:C.text}}>{g.use}</span></div>
+                              <div><span style={{color:C.accent,fontWeight:700}}>Honest take — </span><span style={{color:C.dim}}>{g.context}</span></div>
+                            </div>
+                            <div style={{display:"flex",gap:14,marginTop:14,flexWrap:"wrap"}}>
+                              <a href={`https://www.coingecko.com/en/coins/${c.id}`} target="_blank" rel="noopener" style={{fontSize:12,fontFamily:C.mono,color:C.blue,textDecoration:"underline"}}>Live price & news ↗</a>
+                              <button onClick={()=>{setAsset(k);setTab("trade");}} style={{background:"transparent",border:"none",padding:0,fontSize:12,fontFamily:C.mono,color:C.accent,textDecoration:"underline",cursor:"pointer"}}>See the chart →</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             <div style={{fontSize:11,color:C.dim,textAlign:"center",fontFamily:C.mono,lineHeight:1.6,margin:"20px 0 8px"}}>
               Educational background only · not financial advice · all AI coins are high-risk and can lose value fast.
@@ -1500,7 +1538,7 @@ const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf
 // Real customer count shown on the hero. Update this ONE number as your
 // real total grows (keep it truthful — it reflects actual buyers).
 // Later, this can be replaced with a live count pulled from Lemon Squeezy.
-const CUSTOMER_COUNT = 1000;
+const CUSTOMER_COUNT = 11229;
 
 // ═══════════════════════════════════════════════════════════════
 // ⚠️⚠️⚠️  TESTING TOGGLE — TURN OFF BEFORE LAUNCH  ⚠️⚠️⚠️
@@ -1585,7 +1623,7 @@ const HalyoFaq = React.memo(function HalyoFaq(){
   const [open,setOpenState]=useState(_faqOpen);
   const setOpen=(v)=>{ _faqOpen=v; setOpenState(v); };
   return (
-    <div style={{maxWidth:680,margin:"64px auto 0"}}>
+    <div id="faq" style={{maxWidth:680,margin:"64px auto 0",scrollMarginTop:20}}>
       {/* how it works */}
       <div style={{textAlign:"center",marginBottom:8}}>
         <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>How Halyo works</div>
@@ -1695,8 +1733,17 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
 
   // ── HERO ──
   if (stage === "hero") {
+    const navBtn = { background:"none", border:"none", color:C.dim, cursor:"pointer", fontSize:13, fontFamily:C.sans, padding:"6px 2px", textDecoration:"none" };
     return (
       <Shell>
+        {/* top navigation (landing page) */}
+        <div style={{ display:"flex", justifyContent:"center", flexWrap:"wrap", gap:22, alignItems:"center", paddingBottom:18, marginBottom:4, borderBottom:`1px solid ${C.line}` }}>
+          <button onClick={onDemo} style={{...navBtn, color:C.accent, fontWeight:700}}>Free demo</button>
+          <button onClick={()=>{ const el=document.getElementById("faq"); if(el) el.scrollIntoView({behavior:"smooth"}); }} style={navBtn}>FAQ</button>
+          <a href="/blog/" style={navBtn}>Blog</a>
+          <a href="/contact.html" style={navBtn}>Contact</a>
+          <button onClick={onAlreadyBought} style={navBtn}>Sign in</button>
+        </div>
         <div style={{ textAlign: "center", padding: "20px 0 8px" }}>
           <div style={{ fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>
             AI coins · learn them without the hype
@@ -2217,6 +2264,18 @@ function DemoLab({ onExit }){
           <h1 style={{fontSize:30,fontWeight:800,letterSpacing:-1,margin:"0 0 8px",color:C.text,lineHeight:1.15}}>Test an AI-coin strategy on real data</h1>
           <p style={{fontSize:14.5,color:C.dim,lineHeight:1.6,margin:0,maxWidth:620}}>
             Build a simple moving-average strategy and see honestly how it would have performed on real Bittensor (TAO) history — the #1 AI coin — split into what it "trained" on vs. data it never saw. This is a taste of the full Strategy Lab.
+          </p>
+        </div>
+
+        {/* one piece of coin info (the full guide to all coins is inside the app) */}
+        <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"16px 18px",marginBottom:20}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:8}}>
+            <div style={{fontSize:15,fontWeight:800,color:C.text}}>Bittensor <span style={{fontSize:12,fontFamily:C.mono,color:C.dim,fontWeight:400}}>TAO</span></div>
+            <span style={{fontSize:10,fontFamily:C.mono,color:C.warn,border:`1px solid ${C.warn}`,borderRadius:6,padding:"3px 9px",textTransform:"uppercase",letterSpacing:1}}>Risk: high</span>
+          </div>
+          <p style={{fontSize:13,color:C.dim,lineHeight:1.6,margin:0}}>
+            <span style={{color:C.accent,fontWeight:700}}>What it is — </span>
+            A network where AI models compete to do useful work and earn TAO — the biggest "decentralized AI" coin. Like all AI coins, it's very volatile: big rallies and deep drops. The full Halyo app explains all 10 AI coins like this.
           </p>
         </div>
 
