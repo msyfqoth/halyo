@@ -1538,7 +1538,7 @@ const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf
 // Real customer count shown on the hero. Update this ONE number as your
 // real total grows (keep it truthful — it reflects actual buyers).
 // Later, this can be replaced with a live count pulled from Lemon Squeezy.
-const CUSTOMER_COUNT = 11229;
+const CUSTOMER_COUNT = 11358;
 
 // ═══════════════════════════════════════════════════════════════
 // ⚠️⚠️⚠️  TESTING TOGGLE — TURN OFF BEFORE LAUNCH  ⚠️⚠️⚠️
@@ -1738,11 +1738,12 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
       <Shell>
         {/* top navigation (landing page) */}
         <div style={{ display:"flex", justifyContent:"center", flexWrap:"wrap", gap:22, alignItems:"center", paddingBottom:18, marginBottom:4, borderBottom:`1px solid ${C.line}` }}>
-          <button onClick={onDemo} style={{...navBtn, color:C.accent, fontWeight:700}}>Free demo</button>
+          <button onClick={onDemo} style={navBtn}>Free demo</button>
           <button onClick={()=>{ const el=document.getElementById("faq"); if(el) el.scrollIntoView({behavior:"smooth"}); }} style={navBtn}>FAQ</button>
           <a href="/blog/" style={navBtn}>Blog</a>
           <a href="/contact.html" style={navBtn}>Contact</a>
           <button onClick={onAlreadyBought} style={navBtn}>Sign in</button>
+          <button onClick={() => { track("StartQuiz", { from: "nav" }); setStage("quiz"); }} style={{ background:C.accent, color:"#08120a", border:"none", borderRadius:7, padding:"8px 16px", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:C.sans }}>Get Halyo — $39</button>
         </div>
         <div style={{ textAlign: "center", padding: "20px 0 8px" }}>
           <div style={{ fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>
@@ -1809,6 +1810,20 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
                 {CUSTOMER_COUNT.toLocaleString()}+ customers
               </div>
               <div style={{ fontSize: 11, color: C.dim }}>learning to trade more honestly with Halyo</div>
+            </div>
+          </div>
+
+          {/* direct buy CTA — for people already convinced */}
+          <div style={{ marginTop: 34, position:"relative", zIndex:2 }}>
+            <button onClick={() => { track("StartQuiz", { from: "buy_cta" }); setStage("quiz"); }} style={{
+              background: C.accent, color: "#08120a", border: "none", borderRadius: 10,
+              padding: "16px 40px", fontSize: 17, fontWeight: 800, cursor: "pointer",
+              fontFamily: C.sans, letterSpacing: 0.2, boxShadow: `0 6px 24px rgba(74,222,128,0.18)`,
+            }}>
+              Get Halyo — $39, one time →
+            </button>
+            <div style={{ fontSize: 12, color: C.dim, fontFamily: C.mono, marginTop: 12 }}>
+              Lifetime access · all future updates free · 2-min quiz to personalise your start
             </div>
           </div>
         </div>
@@ -2039,10 +2054,10 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
         {/* what's inside */}
         <div>
           {[
-            { t: "Lessons for your level", d: "A structured path from risk basics to reading signals — paced to your assessment, not a generic course." },
-            { t: "Your matched strategy", d: `The ${profile.name.toLowerCase()} strategy style, pre-configured for your assets, ready to run.` },
-            { t: "Backtested indicators", d: "Each signal shown with its win rate, expectancy, and drawdown — measured after costs, out-of-sample." },
-            { t: "Risk shown on every trade", d: "Position-size guidance and the honest downside for each setup, so you're never flying blind." },
+            { t: "A full AI-coin course", d: "Plain-language lessons that take you from zero to understanding the 10 top AI coins — paced to your assessment, not a generic course." },
+            { t: "Test strategies on real data", d: "Build and test simple strategies on real AI-coin prices, and see honestly how they would have performed — after real costs, losses and all." },
+            { t: "The coin guide + live charts", d: "What each AI coin is, who's behind it, and the honest risk — plus live charts and practice with fake money." },
+            { t: "Everything, forever", d: "One payment, lifetime access on phone and computer, and every future update free. No subscription." },
           ].map((f, i) => (
             <div key={i} style={{ display: "flex", gap: 14, marginBottom: 18 }}>
               <div style={{ fontFamily: C.mono, fontSize: 12, color: C.accent, paddingTop: 2 }}>
@@ -2115,7 +2130,7 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
 // Point this at your deployed function. e.g. "https://halyo.com/api/validate-license"
 const VALIDATE_URL = "/api/validate-license";
 
-function LicenseGate({ onUnlock }){
+function LicenseGate({ onUnlock, onBack }){
   const [key,setKey]=useState("");
   const [state,setState]=useState("idle"); // idle | checking | error
   const [msg,setMsg]=useState("");
@@ -2185,6 +2200,12 @@ function LicenseGate({ onUnlock }){
         <div style={{fontSize:11,color:C.dim,marginTop:22,lineHeight:1.6}}>
           Your key was emailed to you after purchase. Can't find it? Check spam, or contact <a href="mailto:support@halyoapp.com" style={{color:C.blue}}>support@halyoapp.com</a>.
         </div>
+        <div style={{marginTop:26,paddingTop:18,borderTop:`1px solid ${C.line}`}}>
+          <button onClick={onBack} style={{background:"none",border:"none",color:C.dim,fontSize:13,cursor:"pointer",fontFamily:C.mono,textDecoration:"underline"}}>← Back to home</button>
+          <div style={{fontSize:11,color:C.dim,marginTop:10}}>
+            Don't have a key yet? <button onClick={onBack} style={{background:"none",border:"none",color:C.accent,fontSize:11,cursor:"pointer",fontFamily:C.sans,textDecoration:"underline",padding:0}}>Get Halyo for $39 →</button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -2192,7 +2213,7 @@ function LicenseGate({ onUnlock }){
 
 // ═══════════════════════════════════════════════════════════
 // FREE PUBLIC DEMO — reachable at ?demo=1, no login/payment.
-// One asset (BTC), simple MA backtest, honest verdict. Point ads here.
+// One asset (TAO), simple MA backtest, honest verdict. Point ads here.
 // ═══════════════════════════════════════════════════════════
 function DemoLab({ onExit }){
   const [fast,setFast]=useState(10);
@@ -2256,7 +2277,7 @@ function DemoLab({ onExit }){
         {/* header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div style={{fontSize:22,fontWeight:800,letterSpacing:-0.5}}>Hal<span style={{color:C.accent}}>yo</span> <span style={{fontSize:12,fontFamily:C.mono,color:C.dim,fontWeight:400}}>· free demo</span></div>
-          <button onClick={()=>{window.location.href="/";}} style={{background:"transparent",border:`1px solid ${C.line}`,color:C.dim,borderRadius:8,padding:"7px 14px",fontSize:12,cursor:"pointer"}}>Home</button>
+          <button onClick={onExit} style={{background:"transparent",border:`1px solid ${C.line}`,color:C.dim,borderRadius:8,padding:"7px 14px",fontSize:12,cursor:"pointer"}}>← Home</button>
         </div>
 
         <div style={{marginBottom:18}}>
@@ -2347,14 +2368,14 @@ function DemoLab({ onExit }){
                 The full tool unlocks everything the demo holds back — so you can really learn, not just peek.
               </div>
               <div style={{display:"flex",flexWrap:"wrap",gap:10,justifyContent:"center",marginBottom:20}}>
-                <Lock>4 assets (ETH, SOL, BNB…)</Lock>
+                <Lock>All 10 AI coins (TAO, NEAR, RENDER…)</Lock>
                 <Lock>RSI, cost & trend filters</Lock>
                 <Lock>Multi-period robustness test</Lock>
                 <Lock>Live TradingView charts</Lock>
-                <Lock>Candle-reading course</Lock>
-                <Lock>37-lesson curriculum</Lock>
+                <Lock>The AI coin guide + candle course</Lock>
+                <Lock>Full beginner curriculum</Lock>
               </div>
-              <a href="/" style={{display:"inline-block",background:C.accent,color:"#08120a",textDecoration:"none",borderRadius:8,padding:"13px 30px",fontSize:15,fontWeight:800}}>Get the full Halyo — $39 →</a>
+              <button onClick={onExit} style={{background:C.accent,color:"#08120a",border:"none",borderRadius:8,padding:"13px 30px",fontSize:15,fontWeight:800,cursor:"pointer"}}>Get the full Halyo — $39 →</button>
               <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,marginTop:12}}>one-time · lifetime license · learn before you risk</div>
             </div>
 
@@ -2407,7 +2428,7 @@ export default function App(){
     }} />;
   }
   if(flow==="gate"){
-    return <LicenseGate onUnlock={()=>setFlow("app")} />;
+    return <LicenseGate onUnlock={()=>setFlow("app")} onBack={()=>setFlow("funnel")} />;
   }
   return <TradeApp initialProfile={chosenProfile} />;
 }
