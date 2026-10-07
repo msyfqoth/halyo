@@ -19,17 +19,25 @@ const C = {
   mono: "'JetBrains Mono','SF Mono',Menlo,monospace", sans: "'Inter',system-ui,sans-serif",
 };
 
+// Top AI-sector crypto coins (by market cap / liquidity). All verified to
+// trade on Binance with USDT pairs, so live data + backtests + TradingView work.
 const COINS = {
-  "BTC/USD": { id: "bitcoin", binance: "BTCUSDT", tv: "BINANCE:BTCUSDT", dp: 0 },
-  "ETH/USD": { id: "ethereum", binance: "ETHUSDT", tv: "BINANCE:ETHUSDT", dp: 0 },
-  "SOL/USD": { id: "solana", binance: "SOLUSDT", tv: "BINANCE:SOLUSDT", dp: 2 },
-  "BNB/USD": { id: "binancecoin", binance: "BNBUSDT", tv: "BINANCE:BNBUSDT", dp: 2 },
+  "TAO/USD":     { id: "bittensor",       binance: "TAOUSDT",     tv: "BINANCE:TAOUSDT",     dp: 2, name: "Bittensor", note: "Decentralized AI training network" },
+  "NEAR/USD":    { id: "near",            binance: "NEARUSDT",    tv: "BINANCE:NEARUSDT",    dp: 3, name: "NEAR Protocol", note: "Blockchain built for AI agents" },
+  "ICP/USD":     { id: "internet-computer", binance: "ICPUSDT",   tv: "BINANCE:ICPUSDT",     dp: 2, name: "Internet Computer", note: "On-chain compute for AI apps" },
+  "RENDER/USD":  { id: "render-token",    binance: "RENDERUSDT",  tv: "BINANCE:RENDERUSDT",  dp: 3, name: "Render", note: "GPU power for AI workloads" },
+  "LINK/USD":    { id: "chainlink",       binance: "LINKUSDT",    tv: "BINANCE:LINKUSDT",    dp: 2, name: "Chainlink", note: "Connects AI to real-world data" },
+  "FET/USD":     { id: "fetch-ai",        binance: "FETUSDT",     tv: "BINANCE:FETUSDT",     dp: 4, name: "Artificial Superintelligence Alliance", note: "AI agent economy" },
+  "GRT/USD":     { id: "the-graph",       binance: "GRTUSDT",     tv: "BINANCE:GRTUSDT",     dp: 4, name: "The Graph", note: "Data indexing for AI analytics" },
+  "VIRTUAL/USD": { id: "virtual-protocol", binance: "VIRTUALUSDT", tv: "BINANCE:VIRTUALUSDT", dp: 4, name: "Virtuals Protocol", note: "AI agent launchpad" },
+  "WLD/USD":     { id: "worldcoin-wld",   binance: "WLDUSDT",     tv: "BINANCE:WLDUSDT",     dp: 4, name: "Worldcoin", note: "AI + human identity" },
+  "TIA/USD":     { id: "celestia",        binance: "TIAUSDT",     tv: "BINANCE:TIAUSDT",     dp: 3, name: "Celestia", note: "Modular data availability used by AI chains" },
 };
 
 // ── synthetic fallback ──
 function mulberry32(a){return function(){a|=0;a=(a+0x6d2b79f5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;};}
 function genSeries(seed,n,startPrice,drift,vol){const rand=mulberry32(seed);const out=[];let price=startPrice;const start=Date.now()-n*86400000;for(let i=0;i<n;i++){const shock=(rand()+rand()+rand()-1.5)*vol;price=Math.max(0.01,price*(1+drift+shock));out.push({i,t:start+i*86400000,close:price});}return out;}
-const FALLBACK={"BTC/USD":{seed:7,start:62000,drift:0.0012,vol:0.028},"ETH/USD":{seed:21,start:2400,drift:0.001,vol:0.033},"SOL/USD":{seed:33,start:140,drift:0.0015,vol:0.045},"BNB/USD":{seed:51,start:560,drift:0.0008,vol:0.03}};
+const FALLBACK={"TAO/USD":{seed:7,start:300,drift:0.0015,vol:0.05},"NEAR/USD":{seed:21,start:3.5,drift:0.001,vol:0.045},"ICP/USD":{seed:33,start:5,drift:0.0012,vol:0.045},"RENDER/USD":{seed:51,start:4,drift:0.0013,vol:0.05},"LINK/USD":{seed:63,start:14,drift:0.001,vol:0.04},"FET/USD":{seed:77,start:0.7,drift:0.0012,vol:0.055},"GRT/USD":{seed:88,start:0.1,drift:0.0009,vol:0.05},"VIRTUAL/USD":{seed:95,start:0.6,drift:0.0014,vol:0.07},"WLD/USD":{seed:102,start:1.2,drift:0.0011,vol:0.06},"TIA/USD":{seed:110,start:3,drift:0.001,vol:0.05}};
 
 // ── indicators ──
 function sma(data,period){const out=new Array(data.length).fill(null);let sum=0;for(let i=0;i<data.length;i++){sum+=data[i].close;if(i>=period)sum-=data[i-period].close;if(i>=period-1)out[i]=sum/period;}return out;}
@@ -129,9 +137,9 @@ function walkForward(data,cfg,folds=5){
 
 // ── strategy presets by risk profile ──
 const STRATS={
-  Conservative:{fast:20,slow:50,useRsi:true,defaultAsset:"BTC/USD",note:"Slow crossovers, fewer trades, longer trends."},
-  Balanced:{fast:10,slow:30,useRsi:true,defaultAsset:"ETH/USD",note:"Balanced signals with RSI confirmation."},
-  Aggressive:{fast:5,slow:20,useRsi:false,defaultAsset:"SOL/USD",note:"Fast crossovers, more trades, more noise."},
+  Conservative:{fast:20,slow:50,useRsi:true,defaultAsset:"LINK/USD",note:"Slow crossovers, fewer trades, longer trends."},
+  Balanced:{fast:10,slow:30,useRsi:true,defaultAsset:"NEAR/USD",note:"Balanced signals with RSI confirmation."},
+  Aggressive:{fast:5,slow:20,useRsi:false,defaultAsset:"TAO/USD",note:"Fast crossovers, more trades, more noise."},
 };
 
 // ── lessons ──
@@ -241,7 +249,7 @@ const LESSONS=CURRICULUM.flatMap(m=>m.lessons);
 // ── TradingView advanced chart embed ──
 // Loads TradingView's free widget script once and renders the pro chart.
 // Users get full timeframes (1D/1W/1M/3M/6M/1Y), candlesticks, volume, zoom.
-// symbol is like "BINANCE:BTCUSDT". Re-mounts cleanly when the symbol changes.
+// symbol is like "BINANCE:TAOUSDT". Re-mounts cleanly when the symbol changes.
 function TradingViewChart({ symbol }){
   const containerRef = useRef(null);
   useEffect(()=>{
@@ -287,7 +295,7 @@ function TradeApp({ initialProfile = "Balanced" }){
   const [openLesson,setOpenLesson]=useState(null);
 
   // ── Lab (strategy sandbox) state — independent of the Trade tab ──
-  const [labAsset,setLabAsset]=useState("BTC/USD");
+  const [labAsset,setLabAsset]=useState("TAO/USD");
   const [labFast,setLabFast]=useState(10);
   const [labSlow,setLabSlow]=useState(30);
   const [labMode,setLabMode]=useState("simple");   // simple | medium | advanced
@@ -585,7 +593,7 @@ function TradeApp({ initialProfile = "Balanced" }){
                       <span style={{fontSize:12,fontFamily:C.mono,color:C.dim,letterSpacing:1}}>{asset} · live chart</span>
                       <span style={{fontSize:10,fontFamily:C.mono,color:C.dim}}>powered by TradingView</span>
                     </div>
-                    <TradingViewChart symbol={COINS[asset]?.tv||"BINANCE:BTCUSDT"}/>
+                    <TradingViewChart symbol={COINS[asset]?.tv||"BINANCE:TAOUSDT"}/>
                     {/* strategy readout — connects the lesson to the live view */}
                     <div style={{marginTop:12,padding:"12px 14px",background:C.panel2,border:`1px solid ${C.line}`,borderRadius:10}}>
                       <div style={{fontSize:10,fontFamily:C.mono,color:C.accent,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>How your {profile} strategy reads this chart right now</div>
@@ -1295,9 +1303,10 @@ const PROFILES = {
     name: "Conservative",
     color: C.blue,
     band: "Lower volatility tolerance",
-    blurb: "You prioritize capital preservation and steadier movement over big swings. In crypto — an inherently volatile asset class — that means leaning toward the most established, deepest-liquidity assets and smaller position sizes.",
+    blurb: "You prioritize steadier movement over big swings. Important honesty: AI coins are ALL highly volatile — there is no truly 'safe' one. For you, that means leaning toward the most established, deepest-liquidity AI coins and smaller position sizes.",
     assets: [
-      { sym: "BTC", name: "Bitcoin", why: "Largest, most liquid, least volatile of the majors. The 'blue chip' of crypto.", vol: "Lower (relative)" },
+      { sym: "LINK", name: "Chainlink", why: "One of the oldest, most liquid AI-linked coins. Still volatile, but relatively more established than most.", vol: "Lower (for an AI coin)" },
+      { sym: "NEAR", name: "NEAR Protocol", why: "Large-cap, deep liquidity, among the steadier AI-native chains.", vol: "Moderate" },
     ],
     strat: "Slower moving-average crossovers (e.g. 20/50) that trade less often and ride longer trends. Fewer signals, less noise.",
   },
@@ -1305,10 +1314,11 @@ const PROFILES = {
     name: "Balanced",
     color: C.accent,
     band: "Moderate volatility tolerance",
-    blurb: "You can sit through drawdowns for better upside, but you're not chasing maximum risk. A mix of the top assets with disciplined rules fits you.",
+    blurb: "You can sit through drawdowns for better upside, but you're not chasing maximum risk. A mix of the larger AI coins with disciplined rules fits you — remembering that even the big ones swing hard.",
     assets: [
-      { sym: "BTC", name: "Bitcoin", why: "Core, lower-volatility anchor for the portfolio.", vol: "Lower (relative)" },
-      { sym: "ETH", name: "Ethereum", why: "Larger swings than BTC, deep liquidity, still established.", vol: "Moderate" },
+      { sym: "NEAR", name: "NEAR Protocol", why: "A larger-cap AI chain — a relatively steadier anchor in this sector.", vol: "Moderate" },
+      { sym: "RENDER", name: "Render", why: "Real AI-compute use case, bigger swings than NEAR, decent liquidity.", vol: "Higher" },
+      { sym: "ICP", name: "Internet Computer", why: "Established AI-compute project with sharp moves.", vol: "Higher" },
     ],
     strat: "Balanced crossovers (10/30) with RSI confirmation to filter weak signals. A middle ground between frequency and conviction.",
   },
@@ -1316,11 +1326,11 @@ const PROFILES = {
     name: "Aggressive",
     color: C.warn,
     band: "Higher volatility tolerance",
-    blurb: "You're comfortable with sharp drawdowns in exchange for larger potential moves, using money you can afford to lose. Higher-volatility assets and more active strategies suit you — with the understanding that bigger swings cut both ways.",
+    blurb: "You're comfortable with sharp drawdowns in exchange for larger potential moves, using money you can afford to lose. The smaller, hype-driven AI coins suit you — with the hard understanding that these swing violently both ways and can fall fast.",
     assets: [
-      { sym: "ETH", name: "Ethereum", why: "Established but more volatile than BTC.", vol: "Moderate" },
-      { sym: "SOL", name: "Solana", why: "High volatility, sharp trends — bigger upside and bigger drawdowns.", vol: "Higher" },
-      { sym: "BNB", name: "BNB", why: "Active mover with strong trends.", vol: "Higher" },
+      { sym: "TAO", name: "Bittensor", why: "The flagship AI coin — strong trends, very large swings.", vol: "Higher" },
+      { sym: "FET", name: "ASI (Fetch)", why: "AI-agent narrative, highly volatile.", vol: "Higher" },
+      { sym: "VIRTUAL", name: "Virtuals Protocol", why: "Smaller AI-agent coin — sharp pumps and sharp drops. High risk.", vol: "Very high" },
     ],
     strat: "Faster crossovers (5/20) that catch trends early and trade more often. More signals, more noise — demands discipline.",
   },
@@ -1359,7 +1369,7 @@ const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf
 // Real customer count shown on the hero. Update this ONE number as your
 // real total grows (keep it truthful — it reflects actual buyers).
 // Later, this can be replaced with a live count pulled from Lemon Squeezy.
-const CUSTOMER_COUNT = 9873;
+const CUSTOMER_COUNT = 1000;
 
 // ═══════════════════════════════════════════════════════════════
 // ⚠️⚠️⚠️  TESTING TOGGLE — TURN OFF BEFORE LAUNCH  ⚠️⚠️⚠️
@@ -1423,16 +1433,18 @@ const CANDLE_QUIZ = [
 const HOW_STEPS=[
   { n:"1", t:"Take a quick 5-question quiz", d:"It's free and takes about two minutes. It helps figure out where you should start based on how comfortable you are with risk. No sign-up needed." },
   { n:"2", t:"Learn the basics, step by step", d:"Short, plain-language lessons take you from 'what is crypto' all the way to how trading strategies work. No jargon — everything is explained simply." },
-  { n:"3", t:"Test ideas on real past prices", d:"Try a simple strategy and see how it would have done on real Bitcoin history — including the times it lost. This is where most people have their 'oh, now I get it' moment." },
+  { n:"3", t:"Test ideas on real past prices", d:"Try a simple strategy and see how it would have done on real AI-coin history — including the times it lost. This is where most people have their 'oh, now I get it' moment." },
   { n:"4", t:"Practise before using real money", d:"Get comfortable and build good habits first. Halyo never tells you to buy or sell — it helps you understand, so any decision you make is your own." },
 ];
 const FAQS=[
+  { q:"What are 'AI coins' and why focus on them?", a:"AI coins are cryptocurrencies tied to artificial-intelligence projects — things like Bittensor (TAO), NEAR, Render and Chainlink. They're the hottest, most-hyped part of crypto right now, which also makes them the easiest place for beginners to lose money chasing the hype. Halyo focuses here because it's exactly where honest, clear thinking is most needed." },
   { q:"Do I need any experience with crypto or trading?", a:"No. Halyo is built for complete beginners. It starts from the very basics — what crypto even is — and explains everything in simple, everyday language. If you've never traded before, this is made for you." },
+  { q:"Are AI coins a good investment?", a:"We honestly can't tell you that, and we won't. AI coins are extremely volatile — they can rise fast and fall just as fast. Halyo doesn't tell you what to buy. It teaches you to evaluate them for yourself and see the real risks, so you make your own informed decision instead of following hype." },
   { q:"Is this financial advice? Will it tell me what to buy?", a:"No, and that's on purpose. Halyo is a learning tool. It never tells you to buy or sell anything. Instead, it teaches you how things work and lets you test ideas yourself, so you can make your own informed decisions. Anyone who promises you what to buy is best avoided." },
-  { q:"Will this make me money?", a:"We won't promise that — because no honest tool can. The truth is most people who trade actively lose money. Halyo's job is to help you learn, understand the real risks, and avoid common mistakes. It's about becoming smarter and more careful, not getting rich quick." },
+  { q:"Will this make me money?", a:"We won't promise that — because no honest tool can. The truth is most people who trade actively lose money, and AI coins are more volatile than most. Halyo's job is to help you learn, understand the real risks, and avoid common mistakes. It's about becoming smarter and more careful, not getting rich quick." },
   { q:"What exactly do I get for $39?", a:"A one-time payment (not a subscription) gives you lifetime access on desktop and mobile: the full set of lessons, the tool to test strategies on real data, candle-reading practice, live charts, and all future updates at no extra cost." },
   { q:"Is $39 a one-time cost or a subscription?", a:"One-time. You pay once and it's yours, including future updates. No monthly fees, no surprises." },
-  { q:"Can I try it before I buy?", a:"Yes. There's a free demo where you can test a simple Bitcoin strategy and see how the tool works — no sign-up, no payment. It's a small taste of the full version." },
+  { q:"Can I try it before I buy?", a:"Yes. There's a free demo where you can test a simple AI-coin strategy and see how the tool works — no sign-up, no payment. It's a small taste of the full version." },
   { q:"What if it's not for me?", a:"If it's not a fit, just email support@halyoapp.com and we'll help. We'd rather you be happy than stuck with something you don't use." },
   { q:"Is my money safe? Does Halyo touch my crypto?", a:"Halyo never touches your money or your crypto. It doesn't connect to any exchange or wallet, and it can't place trades. It's purely a place to learn and test — completely separate from where you'd actually buy anything." },
   { q:"Do I need to install anything?", a:"No. Halyo runs in your web browser on your phone or computer. You can also add it to your home screen so it feels like an app." },
@@ -1554,16 +1566,17 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
       <Shell>
         <div style={{ textAlign: "center", padding: "20px 0 8px" }}>
           <div style={{ fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>
-            Learn crypto trading without the hype
+            AI coins · learn them without the hype
           </div>
           <h1 style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.5, margin: "0 0 18px", maxWidth: 680, marginLeft: "auto", marginRight: "auto", color: C.text }}>
-            Learn crypto the honest way —{" "}
-            <span style={{ color: C.accent }}>before you risk a single dollar.</span>
+            Everyone's hyping AI coins.{" "}
+            <span style={{ color: C.accent }}>Learn to think clearly about them first.</span>
           </h1>
           <p style={{ fontSize: 17, color: C.dim, lineHeight: 1.6, maxWidth: 560, margin: "0 auto 14px" }}>
-            Most crypto apps promise you'll get rich. We won't. Halyo teaches you how trading
-            really works — in plain, simple words anyone can follow — and lets you test ideas on
-            real prices to see what actually happens. No hype. No pressure. Just the truth.
+            AI coins like Bittensor, NEAR and Render are the hottest, most hyped corner of crypto —
+            and the easiest place to get burned. Halyo teaches you how they really work, in plain
+            simple words, and lets you test ideas on real prices to see what actually happens.
+            No hype. No "buy now." Just the truth, so you don't get rekt chasing the next narrative.
           </p>
           <p style={{ fontSize: 14, color: C.accent, lineHeight: 1.6, maxWidth: 520, margin: "0 auto 30px", fontWeight: 600 }}>
             Try it free right now — no signup, no card, no catch.
@@ -1580,7 +1593,7 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
             </button>
           </div>
           <div style={{ fontSize: 12, color: C.dim, fontFamily: C.mono, marginTop: 12 }}>
-            Test a real Bitcoin strategy in 30 seconds · nothing to install
+            Test a real AI-coin strategy in 30 seconds · nothing to install
           </div>
 
           {/* SECONDARY: the guided quiz */}
@@ -1686,13 +1699,15 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
             A note from the founder
           </div>
           <p style={{ fontSize: 15, lineHeight: 1.7, color: C.text, margin: "0 0 12px" }}>
-            I got tired of watching people get burned by crypto “signal” groups — the fake win rates,
-            the hidden costs, the countdown timers. So I built the opposite: a tool that shows you
-            honestly how strategies really perform, losses and all, and teaches you to think for yourself.
+            AI coins are the hottest story in crypto right now — and the easiest place to get burned.
+            Every day there's a new "100x AI gem," a new influencer, a new countdown timer. I got tired
+            of watching beginners pile in at the top and get wrecked. So I built the opposite: a tool
+            that teaches you how these coins actually behave and shows you honestly how strategies really
+            perform on them — losses and all.
           </p>
           <p style={{ fontSize: 15, lineHeight: 1.7, color: C.dim, margin: 0 }}>
-            No hype. No promises. Just an honest look at a space that badly needs one. If that resonates,
-            I'd genuinely love your feedback.
+            No hype. No "buy now." Just an honest way to think clearly about AI coins before you risk
+            anything. If that resonates, I'd genuinely love your feedback.
           </p>
           <div style={{ fontSize: 13, fontFamily: C.mono, color: C.accent, marginTop: 16 }}>— The Halyo team</div>
         </div>
@@ -2008,9 +2023,9 @@ function DemoLab({ onExit }){
   useEffect(()=>{
     let alive=true;
     (async()=>{
-      // Binance daily klines for BTC (OHLC so the backtest is honest)
+      // Binance daily klines for TAO/Bittensor (OHLC so the backtest is honest)
       try{
-        const r=await fetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=730");
+        const r=await fetch("https://api.binance.com/api/v3/klines?symbol=TAOUSDT&interval=1d&limit=730");
         if(!r.ok) throw new Error("binance");
         const rows=await r.json();
         if(!alive) return;
@@ -2019,7 +2034,7 @@ function DemoLab({ onExit }){
       }catch(e){
         // fallback: CoinGecko close-only
         try{
-          const r2=await fetch("https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=730&interval=daily");
+          const r2=await fetch("https://api.coingecko.com/api/v3/coins/bittensor/market_chart?vs_currency=usd&days=730&interval=daily");
           if(!r2.ok) throw new Error("cg");
           const j=await r2.json();
           if(!alive) return;
@@ -2066,22 +2081,22 @@ function DemoLab({ onExit }){
 
         <div style={{marginBottom:18}}>
           <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>Try it free · no signup</div>
-          <h1 style={{fontSize:30,fontWeight:800,letterSpacing:-1,margin:"0 0 8px",color:C.text,lineHeight:1.15}}>Test a Bitcoin strategy on real data</h1>
+          <h1 style={{fontSize:30,fontWeight:800,letterSpacing:-1,margin:"0 0 8px",color:C.text,lineHeight:1.15}}>Test an AI-coin strategy on real data</h1>
           <p style={{fontSize:14.5,color:C.dim,lineHeight:1.6,margin:0,maxWidth:620}}>
-            Build a simple moving-average strategy and see honestly how it would have performed on real BTC history — split into what it "trained" on vs. data it never saw. This is a taste of the full Strategy Lab.
+            Build a simple moving-average strategy and see honestly how it would have performed on real Bittensor (TAO) history — the #1 AI coin — split into what it "trained" on vs. data it never saw. This is a taste of the full Strategy Lab.
           </p>
         </div>
 
         {loadState==="error"?(
           <div style={{textAlign:"center",padding:40,color:C.dim,fontFamily:C.mono,fontSize:13}}>Couldn't load market data right now — please try again shortly.</div>
         ):loadState==="loading"?(
-          <div style={{textAlign:"center",padding:40,color:C.dim,fontFamily:C.mono,fontSize:13}}>Loading real BTC data…</div>
+          <div style={{textAlign:"center",padding:40,color:C.dim,fontFamily:C.mono,fontSize:13}}>Loading real TAO data…</div>
         ):(
           <>
             {/* controls */}
             <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"18px",marginBottom:16}}>
               <div style={{display:"flex",flexWrap:"wrap",gap:20,alignItems:"flex-end"}}>
-                <div style={{padding:"6px 12px",background:C.panel2,border:`1px solid ${C.line}`,borderRadius:6,fontSize:13,fontFamily:C.mono}}>BTC/USD</div>
+                <div style={{padding:"6px 12px",background:C.panel2,border:`1px solid ${C.line}`,borderRadius:6,fontSize:13,fontFamily:C.mono}}>TAO/USD</div>
                 <div style={{flex:"1 1 200px"}}>
                   <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Fast MA — <span style={{color:C.accent}}>{fast} days</span></div>
                   <input type="range" min={2} max={50} value={fast} onChange={e=>setFast(Math.min(+e.target.value,slow-1))} style={{width:"100%",accentColor:C.accent}}/>
@@ -2114,7 +2129,7 @@ function DemoLab({ onExit }){
               <div style={{background:C.panel,border:`1px solid ${verdict.tone}`,borderRadius:10,padding:"14px 16px",marginBottom:16}}>
                 <div style={{fontSize:10,fontFamily:C.mono,letterSpacing:1.5,textTransform:"uppercase",color:verdict.tone,marginBottom:6}}>What this result is telling you</div>
                 <div style={{fontSize:13.5,color:C.text,lineHeight:1.6}}>{verdict.text}</div>
-                <div style={{fontSize:11.5,color:C.dim,marginTop:8}}>For reference, simply holding BTC over this period returned {fmtPct(full?.metrics.buyHold)}.</div>
+                <div style={{fontSize:11.5,color:C.dim,marginTop:8}}>For reference, simply holding TAO over this period returned {fmtPct(full?.metrics.buyHold)}.</div>
               </div>
             )}
 
