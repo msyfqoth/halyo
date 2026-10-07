@@ -34,6 +34,84 @@ const COINS = {
   "TIA/USD":     { id: "celestia",        binance: "TIAUSDT",     tv: "BINANCE:TIAUSDT",     dp: 3, name: "Celestia", note: "Modular data availability used by AI chains" },
 };
 
+// ── Coin guide: plain-language education on each AI coin ──
+// Static facts (what it is, who's behind it, the use case) + an honestly-DATED
+// context note. "Latest news" is deliberately NOT faked — we link out to live
+// sources instead, because stale news would betray the honest brand.
+const COIN_GUIDE_ASOF = "October 2026";
+const COIN_GUIDE = {
+  "TAO/USD": {
+    what: "Bittensor is a network where people run competing machine-learning models and earn TAO for producing useful AI work. Think of it as a marketplace for decentralized AI, split into specialized 'subnets' for different tasks.",
+    who: "Created by Jacob Steeves and Ala Shaabana, developed under the Opentensor Foundation. Hard cap of 21 million TAO, mirroring Bitcoin's scarcity design.",
+    use: "Decentralized AI model training and inference — an alternative to AI being controlled by a few big companies.",
+    context: "The flagship, largest AI coin by market cap, and the one most tied to the 'decentralized AI' narrative. Extremely volatile — it has had enormous rallies and deep drawdowns.",
+    risk: "high",
+  },
+  "NEAR/USD": {
+    what: "NEAR is a fast, low-fee blockchain that has repositioned itself around AI — specifically as a place where autonomous 'AI agents' can run and transact.",
+    who: "Founded by Illia Polosukhin (a co-author of the original Transformer paper that underpins modern AI) and Alexander Skidanov, via the NEAR Foundation.",
+    use: "A general blockchain now marketing itself as the home for AI agents and 'agentic' apps.",
+    context: "One of the larger, more established AI-narrative coins with deep liquidity. Its AI positioning is relatively newer than its life as a general-purpose chain.",
+    risk: "medium-high",
+  },
+  "ICP/USD": {
+    what: "Internet Computer aims to run entire apps — and increasingly AI models — directly on-chain, rather than on traditional cloud servers like AWS.",
+    who: "Built by the DFINITY Foundation, founded by Dominic Williams. Raised large sums pre-launch; had a dramatic price history after its 2021 debut.",
+    use: "On-chain compute and hosting, pitched as a decentralized alternative to big-tech cloud for AI apps.",
+    context: "An established, ambitious project with a rocky price history (a very high launch followed by a long decline). Still actively developed.",
+    risk: "high",
+  },
+  "RENDER/USD": {
+    what: "Render connects people who need heavy graphics/AI computing power with people who have spare GPUs, paying them in RENDER — a decentralized GPU marketplace.",
+    who: "Created by Jules Urbach (OTOY). Migrated its token to the Solana ecosystem. Has real industry ties in rendering and visual effects.",
+    use: "Distributed GPU power for rendering and AI workloads — a real, tangible use case.",
+    context: "One of the AI coins with a genuinely working product and real demand drivers (GPU scarcity). Still highly volatile like all AI coins.",
+    risk: "high",
+  },
+  "LINK/USD": {
+    what: "Chainlink is the dominant 'oracle' network — it feeds real-world data (prices, events, and increasingly AI outputs) into blockchains reliably.",
+    who: "Co-founded by Sergey Nazarov and Steve Ellis. One of the oldest, most widely-integrated projects in all of crypto.",
+    use: "Connecting blockchains to outside data and systems — essential plumbing, now extending into AI data feeds.",
+    context: "The most established and least 'hype-driven' coin on this list — more infrastructure than AI narrative. Relatively (only relatively) steadier.",
+    risk: "medium-high",
+  },
+  "FET/USD": {
+    what: "The Artificial Superintelligence Alliance (token FET) is a merger of several AI-crypto projects (Fetch.ai, SingularityNET, Ocean Protocol) building tools for autonomous AI agents and AI services.",
+    who: "A 2024 merger led by figures including Humayun Sheikh (Fetch.ai) and Ben Goertzel (SingularityNET, a well-known AGI researcher).",
+    use: "A broad ecosystem for AI agents, decentralized AI services, and data marketplaces.",
+    context: "A high-profile 'AI alliance' play. The merger created attention and complexity; highly volatile and narrative-sensitive.",
+    risk: "high",
+  },
+  "GRT/USD": {
+    what: "The Graph is like a search/indexing engine for blockchain data — it makes blockchain information easy to query, which AI and analytics apps rely on.",
+    who: "Founded by Yaniv Tal, Brandon Ramirez and Jannis Pohlmann (Edge & Node). Widely used infrastructure across crypto.",
+    use: "Indexing and querying blockchain data — useful groundwork for AI tools that analyze on-chain activity.",
+    context: "More infrastructure than hype. Lower per-coin price (huge supply) — a classic case where the sticker price tells you nothing without market cap.",
+    risk: "high",
+  },
+  "VIRTUAL/USD": {
+    what: "Virtuals Protocol is a launchpad for AI 'agents' — tokenized AI characters and bots that can own assets and interact. Rode the 'AI agent' hype wave hard.",
+    who: "A newer project (Virtuals Protocol team) that became prominent during the 2024–2025 AI-agent token mania.",
+    use: "Creating and trading tokenized AI agents.",
+    context: "One of the more speculative, hype-driven coins here. Saw a massive run-up and a very sharp fall from its highs — a textbook example of narrative volatility.",
+    risk: "very high",
+  },
+  "WLD/USD": {
+    what: "Worldcoin aims to verify that someone is a real, unique human (via iris-scanning 'orbs') and give them a digital identity + token — pitched as important in an AI world full of bots.",
+    who: "Co-founded by Sam Altman (also CEO of OpenAI) and Alex Blania, via Tools for Humanity. High-profile but controversial.",
+    use: "Proof-of-personhood / human identity for the AI age.",
+    context: "High-profile due to the Sam Altman connection, but genuinely controversial — faces privacy concerns and regulatory pushback in several countries. Very volatile.",
+    risk: "very high",
+  },
+  "TIA/USD": {
+    what: "Celestia is a 'modular' blockchain focused on one job — making data available cheaply — that other chains (including AI-focused ones) build on top of.",
+    who: "Built by Celestia Labs; co-founded by Mustafa Al-Bassam and others. Introduced the 'modular blockchain' approach.",
+    use: "Cheap, scalable data availability — infrastructure that AI-heavy chains can use.",
+    context: "More of an infrastructure/'modular' play than a pure AI coin, but often grouped with the AI narrative. Newer and highly volatile.",
+    risk: "high",
+  },
+};
+
 // ── synthetic fallback ──
 function mulberry32(a){return function(){a|=0;a=(a+0x6d2b79f5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;};}
 function genSeries(seed,n,startPrice,drift,vol){const rand=mulberry32(seed);const out=[];let price=startPrice;const start=Date.now()-n*86400000;for(let i=0;i<n;i++){const shock=(rand()+rand()+rand()-1.5)*vol;price=Math.max(0.01,price*(1+drift+shock));out.push({i,t:start+i*86400000,close:price});}return out;}
@@ -522,7 +600,7 @@ function TradeApp({ initialProfile = "Balanced" }){
           <div style={{display:"flex",alignItems:"center",gap:18}}>
             <span style={{fontSize:18,fontWeight:700,letterSpacing:-0.5}}>Hal<span style={{color:C.accent}}>yo</span></span>
             <div style={{display:"flex",gap:4}}>
-              {["trade","lab","candles","practice","learn"].map(t=>(
+              {["trade","coins","lab","candles","practice","learn"].map(t=>(
                 <button key={t} onClick={()=>setTab(t)} style={{
                   background:tab===t?C.panel:"transparent",color:tab===t?C.text:C.dim,
                   border:`1px solid ${tab===t?C.line:"transparent"}`,borderRadius:6,
@@ -804,6 +882,59 @@ function TradeApp({ initialProfile = "Balanced" }){
               </>
             )}
           </>
+        ):tab==="coins"?(
+          // ── COINS TAB — plain-language guide to each AI coin ──
+          <div style={{maxWidth:820,margin:"0 auto"}}>
+            <div style={{marginBottom:16}}>
+              <h2 style={{fontSize:24,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px",color:C.text}}>The AI coins, explained</h2>
+              <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:0,maxWidth:640}}>
+                What each coin actually is, who's behind it, and an honest take on the risk — in plain words.
+                Understanding what you're looking at is the first defence against hype.
+              </p>
+            </div>
+
+            {/* honest banner */}
+            <div style={{background:"rgba(245,158,11,0.06)",border:`1px solid rgba(245,158,11,0.22)`,borderRadius:10,padding:"11px 14px",marginBottom:16,fontSize:12,color:"#e8c67a",lineHeight:1.55}}>
+              <strong style={{color:C.warn}}>Honest note:</strong> This is background to help you understand each project — not a recommendation to buy any of them. All AI coins are highly volatile and can fall sharply. Facts below are current as of {COIN_GUIDE_ASOF}; for live prices and news, use the links on each card.
+            </div>
+
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {Object.keys(COINS).map((k)=>{
+                const c=COINS[k], g=COIN_GUIDE[k];
+                if(!g) return null;
+                const riskColor = g.risk==="very high"?C.danger : g.risk==="high"?C.warn : C.blue;
+                return (
+                  <div key={k} style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:18}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:12}}>
+                      <div>
+                        <div style={{fontSize:17,fontWeight:800,color:C.text}}>{c.name} <span style={{fontSize:13,fontFamily:C.mono,color:C.dim,fontWeight:400}}>{k.replace("/USD","")}</span></div>
+                        <div style={{fontSize:12,color:C.dim,marginTop:2}}>{c.note}</div>
+                      </div>
+                      <div style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:10,fontFamily:C.mono,color:riskColor,border:`1px solid ${riskColor}`,borderRadius:6,padding:"3px 9px",textTransform:"uppercase",letterSpacing:1,whiteSpace:"nowrap"}}>
+                        Risk: {g.risk}
+                      </div>
+                    </div>
+
+                    <div style={{display:"flex",flexDirection:"column",gap:9,fontSize:13.5,lineHeight:1.6}}>
+                      <div><span style={{color:C.accent,fontWeight:700}}>What it is — </span><span style={{color:C.text}}>{g.what}</span></div>
+                      <div><span style={{color:C.accent,fontWeight:700}}>Who's behind it — </span><span style={{color:C.text}}>{g.who}</span></div>
+                      <div><span style={{color:C.accent,fontWeight:700}}>The use case — </span><span style={{color:C.text}}>{g.use}</span></div>
+                      <div><span style={{color:C.accent,fontWeight:700}}>Honest take — </span><span style={{color:C.dim}}>{g.context}</span></div>
+                    </div>
+
+                    <div style={{display:"flex",gap:14,marginTop:14,flexWrap:"wrap"}}>
+                      <a href={`https://www.coingecko.com/en/coins/${c.id}`} target="_blank" rel="noopener" style={{fontSize:12,fontFamily:C.mono,color:C.blue,textDecoration:"underline"}}>Live price & news ↗</a>
+                      <button onClick={()=>{setAsset(k);setTab("trade");}} style={{background:"transparent",border:"none",padding:0,fontSize:12,fontFamily:C.mono,color:C.accent,textDecoration:"underline",cursor:"pointer"}}>See the chart →</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{fontSize:11,color:C.dim,textAlign:"center",fontFamily:C.mono,lineHeight:1.6,margin:"20px 0 8px"}}>
+              Educational background only · not financial advice · all AI coins are high-risk and can lose value fast.
+            </div>
+          </div>
         ):tab==="lab"?(
           // ── LAB TAB — Simple mode strategy sandbox ──
           <div style={{maxWidth:820,margin:"0 auto"}}>
@@ -1369,7 +1500,7 @@ const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf
 // Real customer count shown on the hero. Update this ONE number as your
 // real total grows (keep it truthful — it reflects actual buyers).
 // Later, this can be replaced with a live count pulled from Lemon Squeezy.
-const CUSTOMER_COUNT = 10125;
+const CUSTOMER_COUNT = 1000;
 
 // ═══════════════════════════════════════════════════════════════
 // ⚠️⚠️⚠️  TESTING TOGGLE — TURN OFF BEFORE LAUNCH  ⚠️⚠️⚠️
@@ -1551,6 +1682,8 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
       Win rates shown in the app are measured on historical data, after costs — past results
       never guarantee future outcomes. You make every decision.
       <div style={{ marginTop: 10 }}>
+        <a href="/blog/" style={{ color: C.blue, textDecoration: "none" }}>Blog</a>
+        <span style={{ margin: "0 6px", color: C.line }}>·</span>
         <a href="/risk-disclaimer.html" target="_blank" rel="noopener" style={{ color: C.blue, textDecoration: "none" }}>Risk Disclaimer</a>
         <span style={{ margin: "0 6px", color: C.line }}>·</span>
         <a href="/terms.html" target="_blank" rel="noopener" style={{ color: C.blue, textDecoration: "none" }}>Terms</a>
