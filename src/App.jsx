@@ -2090,19 +2090,16 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
               </div>
             ))}
           </div>
-          <button onClick={() => {
-            // Opens the real Lemon Squeezy checkout for the $39 product.
-            // After payment, Lemon Squeezy emails the buyer a license key and
-            // (per your product's "after purchase" redirect setting) sends them
-            // back to the app, where the license gate unlocks it.
+          <a href={CHECKOUT_URL} onClick={() => {
+            // A standard link lets Google's cross-domain linker decorate checkout.
             track("InitiateCheckout", { value: 39, currency: "USD" });
-            window.location.href = CHECKOUT_URL;
           }} style={{
+            display: "block", boxSizing: "border-box", textAlign: "center", textDecoration: "none",
             width: "100%", background: C.accent, color: "#08120a", border: "none",
             borderRadius: 8, padding: "14px", fontSize: 15, fontWeight: 700, cursor: "pointer",
           }}>
             Get the {profile.name} plan — $39
-          </button>
+          </a>
           <div style={{ fontSize: 10, color: C.dim, textAlign: "center", marginTop: 10, fontFamily: C.mono }}>
             Secure checkout via Lemon Squeezy · demo skips real payment
           </div>
