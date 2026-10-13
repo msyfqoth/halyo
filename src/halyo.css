@@ -1,0 +1,20 @@
+/* Responsive product shell; components retain their existing visual styling. */
+html, body { background: #0a0e14; }
+#root {
+  width: 100%;
+  max-width: none;
+  border: 0;
+  text-align: left;
+}
+button, input, select, .halyo-checkout { touch-action: manipulation; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .halyo-shell-inner { padding: 18px 16px 44px !important; }
+  .halyo-hero-title { font-size: clamp(28px, 8vw, 38px) !important; }
+  button, .halyo-checkout, select { min-height: 44px; }
+  .halyo-checkout { max-width: 100%; overflow-wrap: anywhere; }
+  input[type="text"], input:not([type]), select { font-size: 16px !important; }
+}

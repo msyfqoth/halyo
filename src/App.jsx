@@ -3,6 +3,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ReferenceLine, Area, AreaChart,
 } from "recharts";
+import "./halyo.css";
 
 // ─────────────────────────────────────────────────────────────
 // Halyo — the app. Three surfaces:
@@ -14,7 +15,7 @@ import {
 
 const C = {
   bg: "#0a0e14", panel: "#111721", panel2: "#0d131c", line: "#1e2836",
-  text: "#c8d3e0", dim: "#5c6a7e", accent: "#4ade80", accentDim: "#22c55e",
+  text: "#c8d3e0", dim: "#94a3b8", accent: "#4ade80", accentDim: "#22c55e",
   warn: "#f59e0b", danger: "#ef4444", blue: "#38bdf8", violet: "#a78bfa",
   mono: "'JetBrains Mono','SF Mono',Menlo,monospace", sans: "'Inter',system-ui,sans-serif",
 };
@@ -370,6 +371,13 @@ function TradeApp({ initialProfile = "Balanced" }){
   const [profile,setProfile]=useState(initialProfile);
   const [showTutorial,setShowTutorial]=useState(true); // first-run
   const [tutStep,setTutStep]=useState(0);
+  const [hasNewRelease,setHasNewRelease]=useState(()=>{
+    try{ return window.localStorage.getItem("halyo_seen_release")!==RELEASE_VERSION; }catch{ return false; }
+  });
+  const markReleaseSeen=()=>{
+    try{ window.localStorage.setItem("halyo_seen_release",RELEASE_VERSION); }catch{}
+    setHasNewRelease(false);
+  };
   const [openLesson,setOpenLesson]=useState(null);
 
   // ── Lab (strategy sandbox) state — independent of the Trade tab ──
@@ -602,9 +610,9 @@ function TradeApp({ initialProfile = "Balanced" }){
       {/* top bar */}
       <div style={{borderBottom:`1px solid ${C.line}`,position:"sticky",top:0,background:C.bg,zIndex:10}}>
         <div style={{maxWidth:1100,margin:"0 auto",padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
-          <div style={{display:"flex",alignItems:"center",gap:18}}>
+          <div style={{display:"flex",alignItems:"center",gap:18,flexWrap:"wrap",rowGap:8,minWidth:0}}>
             <span style={{fontSize:18,fontWeight:700,letterSpacing:-0.5}}>Hal<span style={{color:C.accent}}>yo</span></span>
-            <div style={{display:"flex",gap:4}}>
+            <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
               {["trade","coins","lab","candles","practice","learn"].map(t=>(
                 <button key={t} onClick={()=>setTab(t)} style={{
                   background:tab===t?C.panel:"transparent",color:tab===t?C.text:C.dim,
@@ -614,13 +622,19 @@ function TradeApp({ initialProfile = "Balanced" }){
               ))}
             </div>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",rowGap:8,minWidth:0}}>
             <select value={profile} onChange={e=>setProfile(e.target.value)} style={{
               background:C.panel2,color:C.text,border:`1px solid ${C.line}`,borderRadius:6,
               padding:"6px 10px",fontSize:12,fontFamily:C.mono,cursor:"pointer",
             }}>
               {Object.keys(STRATS).map(p=><option key={p} value={p}>{p}</option>)}
             </select>
+            <a href="/whats-new.html" target="_blank" rel="noopener" onClick={markReleaseSeen}
+              title={hasNewRelease?"New update — see what changed":"See what's new"}
+              style={{position:"relative",background:"transparent",border:`1px solid ${hasNewRelease?C.accent:C.line}`,color:hasNewRelease?C.text:C.dim,borderRadius:6,padding:"6px 12px",fontSize:12,fontFamily:C.mono,textDecoration:"none",whiteSpace:"nowrap"}}>
+              What's new
+              {hasNewRelease&&<span aria-label="new update" style={{position:"absolute",top:-4,right:-4,width:9,height:9,borderRadius:"50%",background:C.accent,boxShadow:`0 0 0 2px ${C.bg}`}}/>}
+            </a>
             <button onClick={()=>{setTutStep(0);setShowTutorial(true);}} style={{
               background:"transparent",border:`1px solid ${C.line}`,color:C.dim,borderRadius:6,
               padding:"6px 12px",fontSize:12,cursor:"pointer",fontFamily:C.mono,
@@ -639,7 +653,7 @@ function TradeApp({ initialProfile = "Balanced" }){
           <>
             {/* controls row */}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:16}}>
-              <div style={{display:"flex",gap:6}}>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                 {Object.keys(COINS).map(a=>(
                   <button key={a} onClick={()=>setAsset(a)} style={{
                     background:asset===a?C.accent:C.panel2,color:asset===a?"#08120a":C.text,
@@ -1530,15 +1544,25 @@ function track(event, data = {}) {
   } catch (e) {}
 }
 
-// Your Lemon Squeezy checkout link for the Halyo $39 product.
+// Your Lemon Squeezy checkout link for the intended Halyo US$39 offer.
 // After payment, set the product's "after purchase" redirect (in Lemon
 // Squeezy) to send buyers to https://halyoapp.com so the license gate loads.
 const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf-67d9-4ec6-9a76-41ed05c75bdc";
+const OFFER_PRICE_USD = 39;
+const OFFER_PRICE_LABEL = "US$39";
+const RELEASE_VERSION = "2026-10-13";
 
-// Real customer count shown on the hero. Update this ONE number as your
-// real total grows (keep it truthful — it reflects actual buyers).
-// Later, this can be replaced with a live count pulled from Lemon Squeezy.
-const CUSTOMER_COUNT = 11358;
+// Use a real link so buying does not require the optional quiz and the
+// Google tag can decorate checkout navigation when cross-domain is configured.
+function CheckoutLink({ from, style, children }) {
+  return (
+    <a href={CHECKOUT_URL} className="halyo-checkout"
+      onClick={() => track("InitiateCheckout", { value: OFFER_PRICE_USD, currency: "USD", from })}
+      style={{ display: "inline-block", boxSizing: "border-box", textDecoration: "none", textAlign: "center", fontFamily: C.sans, ...style }}>
+      {children}
+    </a>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════
 // ⚠️⚠️⚠️  TESTING TOGGLE — TURN OFF BEFORE LAUNCH  ⚠️⚠️⚠️
@@ -1551,12 +1575,6 @@ const TESTING_MODE = false;   // ← change to false before launch
 const TEST_KEY = "TEST-TEST-TEST-TEST";
 // ═══════════════════════════════════════════════════════════════
 
-// Real customer feedback. Keep these genuine — add/rotate as you collect more.
-const TESTIMONIALS = [
-  { quote: "I have been trading for years, and this app has helped me better understand and manage the risks involved in trading.", name: "Abdul Fayadh", tag: "Financial Analyst" },
-  { quote: "So far, this application has suited my needs for learning about cryptocurrency.", name: "Joanne Ng", tag: "Sales Person" },
-  { quote: "For those who want to learn, this app can guide you and make it easier to understand market trends.", name: "Ng Choon Wai", tag: "Telemarketer" },
-];
 
 // ── Candle patterns (o,h,l,c on a 0-100 scale) + honest explanations ──
 const CANDLE_PATTERNS = [
@@ -1600,23 +1618,23 @@ const CANDLE_QUIZ = [
 
 // ── How it works + FAQ (plain language, for the landing page) ──
 const HOW_STEPS=[
-  { n:"1", t:"Take a quick 5-question quiz", d:"It's free and takes about two minutes. It helps figure out where you should start based on how comfortable you are with risk. No sign-up needed." },
-  { n:"2", t:"Learn the basics, step by step", d:"Short, plain-language lessons take you from 'what is crypto' all the way to how trading strategies work. No jargon — everything is explained simply." },
-  { n:"3", t:"Test ideas on real past prices", d:"Try a simple strategy and see how it would have done on real AI-coin history — including the times it lost. This is where most people have their 'oh, now I get it' moment." },
-  { n:"4", t:"Practise before using real money", d:"Get comfortable and build good habits first. Halyo never tells you to buy or sell — it helps you understand, so any decision you make is your own." },
+  { n:"1", t:"Try the guided demo", d:"Run a simple strategy test without signing up. If live market data is unavailable, Halyo clearly switches to illustrative sample prices." },
+  { n:"2", t:"Learn chart basics", d:"Use short, plain-language lessons to understand candles, market behaviour and the limits of common trading ideas." },
+  { n:"3", t:"Practise recognising candles", d:"Answer quick pattern questions, read the explanation, and learn why a candle never guarantees what happens next." },
+  { n:"4", t:"Test ideas on past data", d:"Compare training and unseen periods, include trading costs, and look at losses as well as wins before drawing a conclusion." },
 ];
 const FAQS=[
-  { q:"What are 'AI coins' and why focus on them?", a:"AI coins are cryptocurrencies tied to artificial-intelligence projects — things like Bittensor (TAO), NEAR, Render and Chainlink. They're the hottest, most-hyped part of crypto right now, which also makes them the easiest place for beginners to lose money chasing the hype. Halyo focuses here because it's exactly where honest, clear thinking is most needed." },
+  { q:"What are 'AI coins' and why focus on them?", a:"AI coins are crypto assets connected with artificial-intelligence or computing projects, including Bittensor (TAO), NEAR and Render. They can be highly volatile. Halyo uses them as examples for learning how to inspect claims, read charts and test ideas without treating hype as evidence." },
   { q:"Do I need any experience with crypto or trading?", a:"No. Halyo is built for complete beginners. It starts from the very basics — what crypto even is — and explains everything in simple, everyday language. If you've never traded before, this is made for you." },
   { q:"Are AI coins a good investment?", a:"We honestly can't tell you that, and we won't. AI coins are extremely volatile — they can rise fast and fall just as fast. Halyo doesn't tell you what to buy. It teaches you to evaluate them for yourself and see the real risks, so you make your own informed decision instead of following hype." },
   { q:"Is this financial advice? Will it tell me what to buy?", a:"No, and that's on purpose. Halyo is a learning tool. It never tells you to buy or sell anything. Instead, it teaches you how things work and lets you test ideas yourself, so you can make your own informed decisions. Anyone who promises you what to buy is best avoided." },
   { q:"Will this make me money?", a:"We won't promise that — because no honest tool can. The truth is most people who trade actively lose money, and AI coins are more volatile than most. Halyo's job is to help you learn, understand the real risks, and avoid common mistakes. It's about becoming smarter and more careful, not getting rich quick." },
-  { q:"What exactly do I get for $39?", a:"A one-time payment (not a subscription) gives you lifetime access on desktop and mobile: the full set of lessons, the tool to test strategies on real data, candle-reading practice, live charts, and all future updates at no extra cost." },
-  { q:"Is $39 a one-time cost or a subscription?", a:"One-time. You pay once and it's yours, including future updates. No monthly fees, no surprises." },
+  { q:"What exactly do I get for US$39?", a:"One payment gives you lifetime access to Halyo in a supported web browser. It includes the lesson library, candlestick practice, historical strategy testing and charts. Please confirm the final amount and any tax shown by Lemon Squeezy before paying." },
+  { q:"Is US$39 a one-time cost or a subscription?", a:"Halyo is a one-time lifetime licence, not a monthly subscription. The checkout shows the final price, currency and any applicable tax." },
   { q:"Can I try it before I buy?", a:"Yes. There's a free demo where you can test a simple AI-coin strategy and see how the tool works — no sign-up, no payment. It's a small taste of the full version." },
-  { q:"What if it's not for me?", a:"If it's not a fit, just email support@halyoapp.com and we'll help. We'd rather you be happy than stuck with something you don't use." },
+  { q:"What if it's not for me?", a:"Try the free demo before buying. Our Terms describe a 14-day refund policy. Please read the Terms and the conditions shown at checkout, and contact us with any purchase or refund questions." },
   { q:"Is my money safe? Does Halyo touch my crypto?", a:"Halyo never touches your money or your crypto. It doesn't connect to any exchange or wallet, and it can't place trades. It's purely a place to learn and test — completely separate from where you'd actually buy anything." },
-  { q:"Do I need to install anything?", a:"No. Halyo runs in your web browser on your phone or computer. You can also add it to your home screen so it feels like an app." },
+  { q:"Do I need to install anything?", a:"No native app download is required. Halyo runs in a supported web browser on your phone or computer. Browser support and home-screen shortcut availability depend on your device." },
 ];
 let _faqOpen = null; // survives remounts
 const HalyoFaq = React.memo(function HalyoFaq(){
@@ -1670,7 +1688,7 @@ const HalyoFaq = React.memo(function HalyoFaq(){
 // resetting child state like the FAQ's open answer).
 const Shell = ({ children }) => (
   <div style={{ background: C.bg, minHeight: "100vh", color: C.text, fontFamily: C.sans }}>
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "22px 22px 60px" }}>
+    <div className="halyo-shell-inner" style={{ maxWidth: 900, margin: "0 auto", padding: "22px 22px 60px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: -0.5 }}>
           Hal<span style={{ color: C.accent }}>yo</span>
@@ -1689,12 +1707,6 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
   const [stage, setStage] = useState("hero"); // hero | quiz | result | buy
   const [qIdx, setQIdx] = useState(0);
   const [answers, setAnswers] = useState([]);
-  const [tIdx, setTIdx] = useState(0); // testimonial carousel index
-  useEffect(() => {
-    if (stage !== "hero") return;
-    const id = setInterval(() => setTIdx((i) => (i + 1) % TESTIMONIALS.length), 5000);
-    return () => clearInterval(id);
-  }, [stage]);
 
   const maxScore = QUESTIONS.length * 3;
   const total = answers.reduce((a, b) => a + b, 0);
@@ -1722,6 +1734,8 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
       <div style={{ marginTop: 10 }}>
         <a href="/blog/" style={{ color: C.blue, textDecoration: "none" }}>Blog</a>
         <span style={{ margin: "0 6px", color: C.line }}>·</span>
+        <a href="/whats-new.html" style={{color:C.blue,textDecoration:"none"}}>What's new</a>
+        <span style={{margin:"0 6px",color:C.line}}>·</span>
         <a href="/risk-disclaimer.html" target="_blank" rel="noopener" style={{ color: C.blue, textDecoration: "none" }}>Risk Disclaimer</a>
         <span style={{ margin: "0 6px", color: C.line }}>·</span>
         <a href="/terms.html" target="_blank" rel="noopener" style={{ color: C.blue, textDecoration: "none" }}>Terms</a>
@@ -1743,24 +1757,23 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
           <a href="/blog/" style={navBtn}>Blog</a>
           <a href="/contact.html" style={navBtn}>Contact</a>
           <button onClick={onAlreadyBought} style={navBtn}>Sign in</button>
-          <button onClick={() => { track("StartQuiz", { from: "nav" }); setStage("quiz"); }} style={{ background:C.accent, color:"#08120a", border:"none", borderRadius:7, padding:"8px 16px", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:C.sans }}>Get Halyo — $39</button>
+          <CheckoutLink from="nav" style={{ background:C.accent, color:"#08120a", border:"none", borderRadius:7, padding:"8px 16px", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:C.sans }}>Buy lifetime access — {OFFER_PRICE_LABEL}</CheckoutLink>
         </div>
         <div style={{ textAlign: "center", padding: "20px 0 8px" }}>
           <div style={{ fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>
-            AI coins · learn them without the hype
+            Lessons · candlestick practice · historical testing
           </div>
-          <h1 style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.5, margin: "0 0 18px", maxWidth: 680, marginLeft: "auto", marginRight: "auto", color: C.text }}>
-            Everyone's hyping AI coins.{" "}
-            <span style={{ color: C.accent }}>Learn to think clearly about them first.</span>
+          <h1 className="halyo-hero-title" style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.5, margin: "0 0 18px", maxWidth: 680, marginLeft: "auto", marginRight: "auto", color: C.text }}>
+            Understand crypto charts{" "}
+            <span style={{ color: C.accent }}>before you trade.</span>
           </h1>
           <p style={{ fontSize: 17, color: C.dim, lineHeight: 1.6, maxWidth: 560, margin: "0 auto 14px" }}>
-            AI coins like Bittensor, NEAR and Render are the hottest, most hyped corner of crypto —
-            and the easiest place to get burned. Halyo teaches you how they really work, in plain
-            simple words, and lets you test ideas on real prices to see what actually happens.
-            No hype. No "buy now." Just the truth, so you don't get rekt chasing the next narrative.
+            Learn the basics in plain language, practise reading candlesticks, and test simple
+            strategies on historical data. Halyo is a browser-based learning tool—not a signal
+            service, exchange or promise of profit.
           </p>
           <p style={{ fontSize: 14, color: C.accent, lineHeight: 1.6, maxWidth: 520, margin: "0 auto 30px", fontWeight: 600 }}>
-            Try it free right now — no signup, no card, no catch.
+            Try a guided exercise first. No signup or payment details required.
           </p>
 
           {/* PRIMARY opt-in: the free demo (lowest-commitment) */}
@@ -1774,7 +1787,7 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
             </button>
           </div>
           <div style={{ fontSize: 12, color: C.dim, fontFamily: C.mono, marginTop: 12 }}>
-            Test a real AI-coin strategy in 30 seconds · nothing to install
+            Historical prices when available · clearly labelled sample fallback · nothing to install
           </div>
 
           {/* SECONDARY: the guided quiz */}
@@ -1783,7 +1796,7 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
               background: "transparent", color: C.text, border: `1px solid ${C.line}`, borderRadius: 8,
               padding: "12px 26px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: C.sans,
             }}>
-              Or take the 2-minute "where do I start?" quiz →
+              Optional: take the 2-minute "where do I start?" quiz →
             </button>
           </div>
           <div style={{ fontSize: 12, color: C.dim, marginTop: 18 }}>
@@ -1794,42 +1807,30 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
             }}>Enter your key →</button>
           </div>
 
-          {/* real customer trust count */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 30 }}>
-            <div style={{ display: "flex" }}>
-              {[0,1,2,3].map((i) => (
-                <div key={i} style={{
-                  width: 30, height: 30, borderRadius: "50%",
-                  background: [C.accentDim, C.blue, C.violet, "#e8a24a"][i],
-                  border: `2px solid ${C.bg}`, marginLeft: i === 0 ? 0 : -10,
-                }} />
-              ))}
-            </div>
-            <div style={{ textAlign: "left" }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFamily: C.mono }}>
-                {CUSTOMER_COUNT.toLocaleString()}+ customers
-              </div>
-              <div style={{ fontSize: 11, color: C.dim }}>learning to trade more honestly with Halyo</div>
-            </div>
+          {/* Product evidence replaces unverified audience claims. */}
+          <div style={{ display:"flex", justifyContent:"center", flexWrap:"wrap", gap:8, marginTop:30 }}>
+            {["See the product before buying", "No wallet connection", "No trading signals"].map((item) => (
+              <span key={item} style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:999,padding:"8px 12px",fontSize:11,color:C.dim,fontFamily:C.mono}}>{item}</span>
+            ))}
           </div>
 
           {/* direct buy CTA — for people already convinced */}
           <div style={{ marginTop: 34, position:"relative", zIndex:2 }}>
-            <button onClick={() => { track("StartQuiz", { from: "buy_cta" }); setStage("quiz"); }} style={{
+            <CheckoutLink from="buy_cta" style={{
               background: C.accent, color: "#08120a", border: "none", borderRadius: 10,
               padding: "16px 40px", fontSize: 17, fontWeight: 800, cursor: "pointer",
               fontFamily: C.sans, letterSpacing: 0.2, boxShadow: `0 6px 24px rgba(74,222,128,0.18)`,
             }}>
-              Get Halyo — $39, one time →
-            </button>
+              Buy lifetime access — {OFFER_PRICE_LABEL} →
+            </CheckoutLink>
             <div style={{ fontSize: 12, color: C.dim, fontFamily: C.mono, marginTop: 12 }}>
-              Lifetime access · all future updates free · 2-min quiz to personalise your start
+              Browser access on phone or computer · secure checkout · no quiz required
             </div>
           </div>
         </div>
 
         {/* honest value props */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginTop: 48 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,210px),1fr))", gap: 12, marginTop: 48 }}>
           {[
             { k: "01", t: "Real costs included", d: "Every result counts the fees you'd actually pay — the part most apps quietly leave out to look good." },
             { k: "02", t: "Tested on unseen data", d: "We check strategies on prices they've never seen — so the results aren't just cherry-picked hindsight." },
@@ -1850,8 +1851,8 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(230px,1fr))", gap: 12 }}>
             {[
-              { icon: "∞", t: "Lifetime license", d: "Pay once, keep it forever. No subscription, no recurring charges — one key, yours to keep." },
-              { icon: "↑", t: "Free updates & patches", d: "As Halyo improves — new lessons, new tools, fixes — your license covers every update at no extra cost." },
+              { icon: "∞", t: "Lifetime web access", d: "One payment, not a recurring subscription. Confirm the final total shown at checkout." },
+              { icon: "◇", t: "Licence-key activation", d: "After purchase, return to Halyo and enter your licence key to unlock the learning app in your browser." },
               { icon: "◇", t: "Learning-first", d: "Built to make you a sharper, more honest trader — not to sell you signals or take a cut of your money." },
             ].map((f, i) => (
               <div key={i} style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 12, padding: 20 }}>
@@ -1863,24 +1864,22 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
           </div>
         </div>
 
-        {/* testimonial carousel */}
+        {/* Product proof: only capabilities visible in the app. */}
         <div style={{ marginTop: 56 }}>
           <div style={{ textAlign: "center", fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>
-            What people are saying
+            What you can do inside Halyo
           </div>
-          <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 14, padding: "32px 28px", maxWidth: 640, margin: "0 auto", textAlign: "center", minHeight: 150 }}>
-            <div style={{ fontSize: 18, lineHeight: 1.6, color: C.text, fontStyle: "italic", marginBottom: 18 }}>
-              “{TESTIMONIALS[tIdx].quote}”
-            </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>{TESTIMONIALS[tIdx].name}</div>
-            <div style={{ fontSize: 11, color: C.dim, fontFamily: C.mono, marginTop: 2 }}>{TESTIMONIALS[tIdx].tag}</div>
-          </div>
-          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16 }}>
-            {TESTIMONIALS.map((_, i) => (
-              <button key={i} onClick={() => setTIdx(i)} style={{
-                width: 8, height: 8, borderRadius: "50%", border: "none", cursor: "pointer",
-                background: i === tIdx ? C.accent : C.line, padding: 0,
-              }} />
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12}}>
+            {[
+              {label:"LEARN",title:"Plain-language lessons",body:"Build vocabulary and understand how common chart ideas are supposed to work."},
+              {label:"PRACTISE",title:"Candlestick exercises",body:"Identify patterns and read an honest explanation of what each candle can—and cannot—show."},
+              {label:"TEST",title:"Historical backtesting",body:"Compare a simple rule on training and unseen periods, with costs and losing trades included."},
+            ].map((item)=>(
+              <div key={item.label} style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:20,minHeight:150}}>
+                <div style={{fontSize:10,fontFamily:C.mono,color:C.accent,letterSpacing:1.5,marginBottom:18}}>{item.label}</div>
+                <div style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:8}}>{item.title}</div>
+                <div style={{fontSize:13,color:C.dim,lineHeight:1.6}}>{item.body}</div>
+              </div>
             ))}
           </div>
         </div>
@@ -1888,23 +1887,20 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
         {/* how it works + FAQ */}
         <HalyoFaq />
 
-        {/* founder note */}
+        {/* product rationale */}
         <div style={{ marginTop: 56, background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 14, padding: "28px 26px", maxWidth: 680, margin: "56px auto 0" }}>
           <div style={{ fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>
-            A note from the founder
+            Why Halyo exists
           </div>
           <p style={{ fontSize: 15, lineHeight: 1.7, color: C.text, margin: "0 0 12px" }}>
-            AI coins are the hottest story in crypto right now — and the easiest place to get burned.
-            Every day there's a new "100x AI gem," a new influencer, a new countdown timer. I got tired
-            of watching beginners pile in at the top and get wrecked. So I built the opposite: a tool
-            that teaches you how these coins actually behave and shows you honestly how strategies really
-            perform on them — losses and all.
+            Crypto narratives can move faster than understanding. Halyo puts explanation and practice
+            before financial decisions, so beginners can inspect an idea instead of relying on a slogan,
+            influencer or single chart pattern.
           </p>
           <p style={{ fontSize: 15, lineHeight: 1.7, color: C.dim, margin: 0 }}>
-            No hype. No "buy now." Just an honest way to think clearly about AI coins before you risk
-            anything. If that resonates, I'd genuinely love your feedback.
+            It does not predict prices or tell you what to buy. It gives you lessons, practice and a
+            historical testing workspace so you can see uncertainty and losses as well as positive results.
           </p>
-          <div style={{ fontSize: 13, fontFamily: C.mono, color: C.accent, marginTop: 16 }}>— The Halyo team</div>
         </div>
 
         {/* contact / support */}
@@ -1914,14 +1910,14 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
           </div>
           <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 14, padding: "26px 24px", maxWidth: 520, margin: "0 auto" }}>
             <p style={{ fontSize: 14, color: C.dim, lineHeight: 1.6, margin: "0 0 16px" }}>
-              Before or after you buy, reach a real person. We usually reply within a day.
+              Ask a question before buying, or get help with checkout and licence activation afterward.
             </p>
             <a href="/contact.html" style={{
               display: "inline-block", background: C.accent, color: "#08120a", textDecoration: "none",
               borderRadius: 8, padding: "12px 26px", fontSize: 15, fontWeight: 700,
             }}>Contact us</a>
             <div style={{ fontSize: 11, color: C.dim, fontFamily: C.mono, marginTop: 14 }}>
-              Lost your key · refund requests · anything else · or email support@halyoapp.com
+              Lost key · activation help · purchase questions · refund-policy questions
             </div>
           </div>
         </div>
@@ -2043,21 +2039,21 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
     <Shell>
       <div style={{ textAlign: "center", marginBottom: 28 }}>
         <div style={{ fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>
-          The {profile.name} plan · built for your profile
+          One Halyo licence · the quiz only changes learning suggestions
         </div>
         <h2 style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1, margin: "0 0 8px", color: C.text }}>
-          Everything to trade your match with discipline
+          Build better chart-reading habits
         </h2>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 20, alignItems: "start" }}>
+      <div style={{ display: "flex", flexWrap:"wrap", gap: 20, alignItems: "flex-start" }}>
         {/* what's inside */}
-        <div>
+        <div style={{flex:"1.3 1 320px",minWidth:0}}>
           {[
-            { t: "A full AI-coin course", d: "Plain-language lessons that take you from zero to understanding the 10 top AI coins — paced to your assessment, not a generic course." },
+            { t: "Plain-language crypto lessons", d: "Build from basic concepts to chart reading and strategy testing without relying on trading jargon." },
             { t: "Test strategies on real data", d: "Build and test simple strategies on real AI-coin prices, and see honestly how they would have performed — after real costs, losses and all." },
-            { t: "The coin guide + live charts", d: "What each AI coin is, who's behind it, and the honest risk — plus live charts and practice with fake money." },
-            { t: "Everything, forever", d: "One payment, lifetime access on phone and computer, and every future update free. No subscription." },
+            { t: "Candlestick practice and charts", d: "Learn what common patterns describe, then practise recognising them without treating them as predictions." },
+            { t: "Lifetime browser access", d: "One payment for access on a supported phone or computer browser, with no monthly subscription." },
           ].map((f, i) => (
             <div key={i} style={{ display: "flex", gap: 14, marginBottom: 18 }}>
               <div style={{ fontFamily: C.mono, fontSize: 12, color: C.accent, paddingTop: 2 }}>
@@ -2072,36 +2068,31 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
         </div>
 
         {/* price card */}
-        <div style={{ background: C.panel, border: `1px solid ${C.accent}`, borderRadius: 14, padding: 24, position: "sticky", top: 20 }}>
+        <div style={{flex:"1 1 280px",minWidth:0,background: C.panel, border: `1px solid ${C.accent}`, borderRadius: 14, padding: 24, position: "sticky", top: 20 }}>
           <div style={{ fontSize: 11, fontFamily: C.mono, color: C.dim, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>
             One-time purchase
           </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 40, fontWeight: 800, fontFamily: C.mono }}>$39</span>
-            <span style={{ fontSize: 13, color: C.dim, textDecoration: "line-through", fontFamily: C.mono }}>$59</span>
+            <span style={{ fontSize: 40, fontWeight: 800, fontFamily: C.mono }}>{OFFER_PRICE_LABEL}</span>
           </div>
           <div style={{ fontSize: 12, color: C.dim, marginBottom: 20 }}>
-            Pay once. Download the app. Yours to keep.
+            One-time payment. Confirm the final total and tax at checkout.
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-            {["Desktop + mobile app", "Your matched strategy preloaded", "Full lesson library", "Lifetime updates"].map((li) => (
+            {["Browser access on phone and computer", "Licence-key activation", "Full lesson library", "Candlestick practice and backtesting"].map((li) => (
               <div key={li} style={{ display: "flex", gap: 8, fontSize: 13, color: C.text }}>
                 <span style={{ color: C.accent }}>✓</span> {li}
               </div>
             ))}
           </div>
-          <a href={CHECKOUT_URL} onClick={() => {
-            // A standard link lets Google's cross-domain linker decorate checkout.
-            track("InitiateCheckout", { value: 39, currency: "USD" });
-          }} style={{
-            display: "block", boxSizing: "border-box", textAlign: "center", textDecoration: "none",
+          <CheckoutLink from="quiz_result" style={{
             width: "100%", background: C.accent, color: "#08120a", border: "none",
             borderRadius: 8, padding: "14px", fontSize: 15, fontWeight: 700, cursor: "pointer",
           }}>
-            Get the {profile.name} plan — $39
-          </a>
+            Buy Halyo lifetime access — {OFFER_PRICE_LABEL}
+          </CheckoutLink>
           <div style={{ fontSize: 10, color: C.dim, textAlign: "center", marginTop: 10, fontFamily: C.mono }}>
-            Secure checkout via Lemon Squeezy · demo skips real payment
+            Secure checkout via Lemon Squeezy
           </div>
         </div>
       </div>
@@ -2156,9 +2147,10 @@ function LicenseGate({ onUnlock, onBack }){
         try{
           const already = window.localStorage.getItem("halyo_license");
           window.localStorage.setItem("halyo_license", k);
-          // Fire Purchase only the first time this key unlocks (not on repeat visits)
-          if(!already) track("Purchase", { value: 39, currency: "USD" });
-        }catch(e){ track("Purchase", { value: 39, currency: "USD" }); }
+          // Activation is not a sale. Never emit a purchase event from the app:
+          // payment confirmation must come from the checkout/order system.
+          if(!already) track("license_activation", { first_in_browser: true });
+        }catch(e){ track("license_activation", { first_in_browser: null }); }
         onUnlock(data);
       }else{
         setState("error"); setMsg(data.error||"Invalid or inactive license.");
@@ -2195,12 +2187,12 @@ function LicenseGate({ onUnlock, onBack }){
         }}>{state==="checking"?"Checking…":"Unlock Halyo"}</button>
         {msg && <div style={{fontSize:12,color:C.danger,marginTop:12,lineHeight:1.5}}>{msg}</div>}
         <div style={{fontSize:11,color:C.dim,marginTop:22,lineHeight:1.6}}>
-          Your key was emailed to you after purchase. Can't find it? Check spam, or contact <a href="mailto:support@halyoapp.com" style={{color:C.blue}}>support@halyoapp.com</a>.
+          Your key is delivered after purchase. Can't find it? Check the purchase email and spam folder, or contact <a href="mailto:support@halyoapp.com" style={{color:C.blue}}>support@halyoapp.com</a>.
         </div>
         <div style={{marginTop:26,paddingTop:18,borderTop:`1px solid ${C.line}`}}>
           <button onClick={onBack} style={{background:"none",border:"none",color:C.dim,fontSize:13,cursor:"pointer",fontFamily:C.mono,textDecoration:"underline"}}>← Back to home</button>
           <div style={{fontSize:11,color:C.dim,marginTop:10}}>
-            Don't have a key yet? <button onClick={onBack} style={{background:"none",border:"none",color:C.accent,fontSize:11,cursor:"pointer",fontFamily:C.sans,textDecoration:"underline",padding:0}}>Get Halyo for $39 →</button>
+            Don't have a key yet? <CheckoutLink from="license_gate" style={{color:C.accent,fontSize:11,textDecoration:"underline"}}>Buy lifetime access — {OFFER_PRICE_LABEL} →</CheckoutLink>
           </div>
         </div>
       </div>
@@ -2212,37 +2204,107 @@ function LicenseGate({ onUnlock, onBack }){
 // FREE PUBLIC DEMO — reachable at ?demo=1, no login/payment.
 // One asset (TAO), simple MA backtest, honest verdict. Point ads here.
 // ═══════════════════════════════════════════════════════════
+function createDemoSampleData() {
+  // Illustrative prices only: never present this series as TAO market history.
+  return Array.from({ length: 360 }, (_, i) => {
+    const price = n => 100 + n * 0.08 + Math.sin(n / 8) * 9 + Math.sin(n / 23) * 6;
+    return { i, t: i, open: price(Math.max(0, i - 1)), close: price(i) };
+  });
+}
+
+async function fetchDemoJSON(url, signal, timeoutMs = 5000) {
+  const controller = new AbortController();
+  let timer;
+  let rejectDeadline;
+  const deadline = new Promise((_, reject) => { rejectDeadline = reject; });
+  const abort = () => {
+    controller.abort();
+    rejectDeadline(new Error("Demo request cancelled"));
+  };
+  if (signal.aborted) throw new Error("Demo request cancelled");
+  signal.addEventListener("abort", abort, { once: true });
+  timer = setTimeout(() => {
+    controller.abort();
+    rejectDeadline(new Error("Demo data timeout"));
+  }, timeoutMs);
+  try {
+    return await Promise.race([
+      (async () => {
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok) throw new Error("Demo data unavailable");
+        return await response.json();
+      })(),
+      deadline,
+    ]);
+  } finally {
+    clearTimeout(timer);
+    signal.removeEventListener("abort", abort);
+  }
+}
+
+function validateDemoRows(rows) {
+  const valid = rows.filter(row => Number.isFinite(row.t) && row.t > 0 && Number.isFinite(row.close) && row.close > 0 &&
+    (row.open === undefined || (Number.isFinite(row.open) && row.open > 0)));
+  valid.sort((a, b) => a.t - b.t);
+  const unique = valid.filter((row, i) => i === 0 || row.t !== valid[i - 1].t);
+  if (unique.length < 180) throw new Error("Not enough valid demo history");
+  return unique.map((row, i) => ({ ...row, i }));
+}
+
+async function loadDemoMarketData(signal, timeoutMs = 5000) {
+  try {
+    const rows = await fetchDemoJSON("https://api.binance.com/api/v3/klines?symbol=TAOUSDT&interval=1d&limit=730", signal, timeoutMs);
+    if (!Array.isArray(rows)) throw new Error("Invalid demo data");
+    return { source: "Binance", data: validateDemoRows(rows.filter(Array.isArray).map(k => ({ t: Number(k[0]), open: Number(k[1]), close: Number(k[4]) }))) };
+  } catch (error) {
+    if (signal.aborted) throw error;
+    const result = await fetchDemoJSON("https://api.coingecko.com/api/v3/coins/bittensor/market_chart?vs_currency=usd&days=730&interval=daily", signal, timeoutMs);
+    if (!Array.isArray(result.prices)) throw new Error("Invalid demo data");
+    return { source: "CoinGecko", data: validateDemoRows(result.prices.filter(Array.isArray).map(p => ({ t: Number(p[0]), close: Number(p[1]) }))) };
+  }
+}
+
 function DemoLab({ onExit }){
   const [fast,setFast]=useState(10);
   const [slow,setSlow]=useState(30);
   const [data,setData]=useState([]);
-  const [loadState,setLoadState]=useState("loading"); // loading | ok | error
+  const [loadState,setLoadState]=useState("loading"); // loading | ok
+  const [dataSource,setDataSource]=useState(null);
+  const [attempt,setAttempt]=useState(0);
+  const requestRef=useRef(null);
+  const isSample=dataSource==="sample";
+  const demoDate=t=>isSample?`Day ${Number(t)+1}`:fmtDate(t);
+
+  const useSample=()=>{
+    requestRef.current?.abort();
+    setData(createDemoSampleData());
+    setDataSource("sample");
+    setLoadState("ok");
+  };
 
   useEffect(()=>{
     let alive=true;
+    const controller=new AbortController();
+    requestRef.current=controller;
+    setLoadState("loading");
+    setDataSource(null);
+    setData([]);
     (async()=>{
-      // Binance daily klines for TAO/Bittensor (OHLC so the backtest is honest)
       try{
-        const r=await fetch("https://api.binance.com/api/v3/klines?symbol=TAOUSDT&interval=1d&limit=730");
-        if(!r.ok) throw new Error("binance");
-        const rows=await r.json();
-        if(!alive) return;
-        setData(rows.map((k,i)=>({i,t:k[0],open:parseFloat(k[1]),close:parseFloat(k[4])})));
+        const result=await loadDemoMarketData(controller.signal);
+        if(!alive||controller.signal.aborted) return;
+        setData(result.data);
+        setDataSource(result.source);
         setLoadState("ok");
-      }catch(e){
-        // fallback: CoinGecko close-only
-        try{
-          const r2=await fetch("https://api.coingecko.com/api/v3/coins/bittensor/market_chart?vs_currency=usd&days=730&interval=daily");
-          if(!r2.ok) throw new Error("cg");
-          const j=await r2.json();
-          if(!alive) return;
-          setData(j.prices.map((p,i)=>({i,t:p[0],close:p[1]})));
-          setLoadState("ok");
-        }catch(e2){ if(alive) setLoadState("error"); }
+      }catch{
+        if(!alive||controller.signal.aborted) return;
+        setData(createDemoSampleData());
+        setDataSource("sample");
+        setLoadState("ok");
       }
     })();
-    return ()=>{alive=false;};
-  },[]);
+    return ()=>{alive=false;controller.abort();};
+  },[attempt]);
 
   const split=Math.floor(data.length*0.65);
   const cfg={fast,slow,rsiFloor:30,rsiCeil:70,costBps:10,slipBps:5,useRsi:false};
@@ -2252,13 +2314,14 @@ function DemoLab({ onExit }){
 
   const verdict=useMemo(()=>{
     if(!train||!test) return null;
+    if(isSample) return {tone:C.warn,text:"These results use simulated sample prices. Explore how the moving averages change a test; the numbers do not describe TAO performance or predict real returns."};
     const tr=train.metrics.totalReturn, te=test.metrics.totalReturn, bh=full?.metrics.buyHold??0;
     if((test.metrics.nTrades||0)<4) return {tone:C.dim,text:"Very few trades on the unseen data — not enough to judge. Try different averages."};
     if(tr>0.15 && te<=0) return {tone:C.danger,text:"Classic overfitting: it looked strong on the data it was built around, but lost on data it never saw. Looking good on the past doesn't mean it works ahead — the trap most 'winning' strategies fall into."};
     if(te>0 && te<bh) return {tone:C.warn,text:"It made money on unseen data — but less than simply buying and holding would have. After all that effort, doing nothing beat it."};
     if(te>0 && te>=bh) return {tone:C.accent,text:"It held up on unseen data and beat buy-and-hold here. Encouraging — but one asset, one window isn't proof. The full Lab lets you test costs, filters, and other coins to see if it survives."};
     return {tone:C.warn,text:"Modest or negative on unseen data — the honest norm. Most simple strategies don't beat the market after costs. Seeing that clearly is the whole point."};
-  },[train,test,full]);
+  },[train,test,full,isSample]);
 
   const equity=useMemo(()=>(train&&test)?[...train.equitySeries,...test.equitySeries]:[],[train,test]);
 
@@ -2279,14 +2342,14 @@ function DemoLab({ onExit }){
 
         <div style={{marginBottom:18}}>
           <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>Try it free · no signup</div>
-          <h1 style={{fontSize:30,fontWeight:800,letterSpacing:-1,margin:"0 0 8px",color:C.text,lineHeight:1.15}}>Test an AI-coin strategy on real data</h1>
+          <h1 style={{fontSize:30,fontWeight:800,letterSpacing:-1,margin:"0 0 8px",color:C.text,lineHeight:1.15}}>{isSample?"Explore a strategy with sample prices":"Test an AI-coin strategy on real data"}</h1>
           <p style={{fontSize:14.5,color:C.dim,lineHeight:1.6,margin:0,maxWidth:620}}>
-            Build a simple moving-average strategy and see honestly how it would have performed on real Bittensor (TAO) history — the #1 AI coin — split into what it "trained" on vs. data it never saw. This is a taste of the full Strategy Lab.
+            {isSample?"This practice dataset is generated for illustration. Adjust the moving averages and compare the training and test windows. These are not real cryptocurrency prices.":"Build a simple moving-average strategy and explore Bittensor (TAO) history, split into a training window and a separate test window. This is a taste of the full Strategy Lab."}
           </p>
         </div>
 
         {/* one piece of coin info (the full guide to all coins is inside the app) */}
-        <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"16px 18px",marginBottom:20}}>
+        {!isSample&&<div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"16px 18px",marginBottom:20}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:8}}>
             <div style={{fontSize:15,fontWeight:800,color:C.text}}>Bittensor <span style={{fontSize:12,fontFamily:C.mono,color:C.dim,fontWeight:400}}>TAO</span></div>
             <span style={{fontSize:10,fontFamily:C.mono,color:C.warn,border:`1px solid ${C.warn}`,borderRadius:6,padding:"3px 9px",textTransform:"uppercase",letterSpacing:1}}>Risk: high</span>
@@ -2295,18 +2358,23 @@ function DemoLab({ onExit }){
             <span style={{color:C.accent,fontWeight:700}}>What it is — </span>
             A network where AI models compete to do useful work and earn TAO — the biggest "decentralized AI" coin. Like all AI coins, it's very volatile: big rallies and deep drops. The full Halyo app explains all 10 AI coins like this.
           </p>
-        </div>
+        </div>}
 
-        {loadState==="error"?(
-          <div style={{textAlign:"center",padding:40,color:C.dim,fontFamily:C.mono,fontSize:13}}>Couldn't load market data right now — please try again shortly.</div>
-        ):loadState==="loading"?(
-          <div style={{textAlign:"center",padding:40,color:C.dim,fontFamily:C.mono,fontSize:13}}>Loading real TAO data…</div>
+        {loadState==="loading"?(
+          <div role="status" style={{textAlign:"center",padding:32,color:C.dim,fontSize:13}}>
+            <div>Loading TAO history… You can also practise with sample prices now.</div>
+            <button onClick={useSample} style={{marginTop:14,background:C.panel2,color:C.text,border:`1px solid ${C.line}`,borderRadius:8,padding:"12px 18px",cursor:"pointer"}}>Use sample prices now</button>
+          </div>
         ):(
           <>
+            <div role="status" aria-live="polite" style={{background:C.panel2,border:`1px solid ${isSample?C.warn:C.line}`,borderRadius:10,padding:"14px 16px",marginBottom:16,fontSize:13,lineHeight:1.6}}>
+              <strong>{isSample?"Illustrative sample prices — not market data":`Historical TAO prices · ${dataSource}`}</strong>
+              {isSample&&<><div>Use this example to learn the controls. All returns and win rates below are simulated, not evidence of trading performance.</div><button onClick={()=>setAttempt(n=>n+1)} style={{marginTop:10,background:C.panel,color:C.text,border:`1px solid ${C.line}`,borderRadius:8,padding:"10px 16px",cursor:"pointer"}}>Retry market data</button></>}
+            </div>
             {/* controls */}
             <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"18px",marginBottom:16}}>
               <div style={{display:"flex",flexWrap:"wrap",gap:20,alignItems:"flex-end"}}>
-                <div style={{padding:"6px 12px",background:C.panel2,border:`1px solid ${C.line}`,borderRadius:6,fontSize:13,fontFamily:C.mono}}>TAO/USD</div>
+                <div style={{padding:"6px 12px",background:C.panel2,border:`1px solid ${C.line}`,borderRadius:6,fontSize:13,fontFamily:C.mono}}>{isSample?"SAMPLE / PRICE UNITS":"TAO/USD"}</div>
                 <div style={{flex:"1 1 200px"}}>
                   <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Fast MA — <span style={{color:C.accent}}>{fast} days</span></div>
                   <input type="range" min={2} max={50} value={fast} onChange={e=>setFast(Math.min(+e.target.value,slow-1))} style={{width:"100%",accentColor:C.accent}}/>
@@ -2322,13 +2390,13 @@ function DemoLab({ onExit }){
             {/* results */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12,marginBottom:16}}>
               <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:18}}>
-                <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>In-sample (trained on)</div>
+                <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>{isSample?"Simulated training window":"In-sample (trained on)"}</div>
                 {[["Return",fmtPct(train?.metrics.totalReturn),train?.metrics.totalReturn>0?C.accent:C.danger],["Win rate",fmtPct(train?.metrics.winRate),null],["Worst dip",fmtPct(train?.metrics.maxDD),C.danger],["Trades",train?.metrics.nTrades??"—",null]].map(([l,v,t],i)=>(
                   <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${C.line}`}}><span style={{fontSize:12,color:C.dim}}>{l}</span><span style={{fontSize:16,fontFamily:C.mono,fontWeight:600,color:t||C.text}}>{v}</span></div>
                 ))}
               </div>
               <div style={{background:C.panel,border:`1.5px solid ${C.accent}`,borderRadius:12,padding:18}}>
-                <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Out-of-sample (never seen) ★</div>
+                <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>{isSample?"Simulated test window":"Out-of-sample (never seen) ★"}</div>
                 {[["Return",fmtPct(test?.metrics.totalReturn),test?.metrics.totalReturn>0?C.accent:C.danger],["Win rate",fmtPct(test?.metrics.winRate),null],["Worst dip",fmtPct(test?.metrics.maxDD),C.danger],["Trades",test?.metrics.nTrades??"—",null]].map(([l,v,t],i)=>(
                   <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${C.line}`}}><span style={{fontSize:12,color:C.dim}}>{l}</span><span style={{fontSize:16,fontFamily:C.mono,fontWeight:600,color:t||C.text}}>{v}</span></div>
                 ))}
@@ -2339,19 +2407,19 @@ function DemoLab({ onExit }){
               <div style={{background:C.panel,border:`1px solid ${verdict.tone}`,borderRadius:10,padding:"14px 16px",marginBottom:16}}>
                 <div style={{fontSize:10,fontFamily:C.mono,letterSpacing:1.5,textTransform:"uppercase",color:verdict.tone,marginBottom:6}}>What this result is telling you</div>
                 <div style={{fontSize:13.5,color:C.text,lineHeight:1.6}}>{verdict.text}</div>
-                <div style={{fontSize:11.5,color:C.dim,marginTop:8}}>For reference, simply holding TAO over this period returned {fmtPct(full?.metrics.buyHold)}.</div>
+                <div style={{fontSize:11.5,color:C.dim,marginTop:8}}>{isSample?"Holding the simulated sample series would show":"For reference, simply holding TAO over this period returned"} {fmtPct(full?.metrics.buyHold)}.</div>
               </div>
             )}
 
             {/* equity chart */}
             <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"16px 12px 8px",marginBottom:24}}>
-              <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:8,paddingLeft:8}}>Equity curve · train → test</div>
+              <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:8,paddingLeft:8}}>{isSample?"Simulated equity curve · train → test":"Equity curve · train → test"}</div>
               <ResponsiveContainer width="100%" height={200}>
                 <AreaChart data={equity}>
                   <defs><linearGradient id="demoEq" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.accent} stopOpacity={0.4}/><stop offset="100%" stopColor={C.accent} stopOpacity={0}/></linearGradient></defs>
-                  <XAxis dataKey="t" tickFormatter={fmtDate} tick={{fontSize:10,fill:C.dim}} minTickGap={40}/>
+                  <XAxis dataKey="t" tickFormatter={demoDate} tick={{fontSize:10,fill:C.dim}} minTickGap={40}/>
                   <YAxis tick={{fontSize:10,fill:C.dim}} width={40} domain={["auto","auto"]}/>
-                  <Tooltip contentStyle={{background:C.panel2,border:`1px solid ${C.line}`,borderRadius:8,fontSize:12}} labelFormatter={fmtDate} formatter={(v)=>[fmtNum(v),"equity"]}/>
+                  <Tooltip contentStyle={{background:C.panel2,border:`1px solid ${C.line}`,borderRadius:8,fontSize:12}} labelFormatter={demoDate} formatter={(v)=>[fmtNum(v),"equity"]}/>
                   {data[split]&&<ReferenceLine x={data[split].t} stroke={C.blue} strokeDasharray="4 4" label={{value:"test →",fill:C.blue,fontSize:10}}/>}
                   <Area type="monotone" dataKey="equity" stroke={C.accent} strokeWidth={2} fill="url(#demoEq)"/>
                 </AreaChart>
@@ -2372,12 +2440,12 @@ function DemoLab({ onExit }){
                 <Lock>The AI coin guide + candle course</Lock>
                 <Lock>Full beginner curriculum</Lock>
               </div>
-              <button onClick={onExit} style={{background:C.accent,color:"#08120a",border:"none",borderRadius:8,padding:"13px 30px",fontSize:15,fontWeight:800,cursor:"pointer"}}>Get the full Halyo — $39 →</button>
+              <CheckoutLink from="demo" style={{background:C.accent,color:"#08120a",border:"none",borderRadius:8,padding:"13px 30px",fontSize:15,fontWeight:800,cursor:"pointer"}}>Buy Halyo lifetime access — {OFFER_PRICE_LABEL} →</CheckoutLink>
               <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,marginTop:12}}>one-time · lifetime license · learn before you risk</div>
             </div>
 
             <div style={{fontSize:11,color:C.dim,textAlign:"center",fontFamily:C.mono,lineHeight:1.6,marginTop:20}}>
-              Educational demo · results are historical, after costs · not financial advice · a good backtest never guarantees future results.
+              {isSample?"Illustrative demo · results use simulated sample prices, after costs":"Educational demo · results are historical, after costs"} · not financial advice · a good backtest never guarantees future results.
             </div>
           </>
         )}
