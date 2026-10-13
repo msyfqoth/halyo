@@ -15,7 +15,7 @@ import "./halyo.css";
 
 const C = {
   bg: "#0a0e14", panel: "#111721", panel2: "#0d131c", line: "#1e2836",
-  text: "#c8d3e0", dim: "#5c6a7e", accent: "#4ade80", accentDim: "#22c55e",
+  text: "#c8d3e0", dim: "#94a3b8", accent: "#4ade80", accentDim: "#22c55e",
   warn: "#f59e0b", danger: "#ef4444", blue: "#38bdf8", violet: "#a78bfa",
   mono: "'JetBrains Mono','SF Mono',Menlo,monospace", sans: "'Inter',system-ui,sans-serif",
 };
