@@ -1550,6 +1550,17 @@ function track(event, data = {}) {
 const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf-67d9-4ec6-9a76-41ed05c75bdc";
 const OFFER_PRICE_USD = 39;
 const OFFER_PRICE_LABEL = "US$39";
+
+// Customer evidence supplied by the owner, including offline marketing.
+// Draft count follows the latest owner-provided App(1).jsx, not Ads/GA4 orders.
+// Keep this manually maintained figure separate from the online sales ledger.
+const CUSTOMER_COUNT = 1000;
+const TESTIMONIALS = [
+  { quote: "I have been trading for years, and this app has helped me better understand and manage the risks involved in trading.", name: "Abdul Fayadh", tag: "Financial Analyst" },
+  { quote: "So far, this application has suited my needs for learning about cryptocurrency.", name: "Joanne Ng", tag: "Sales Person" },
+  { quote: "For those who want to learn, this app can guide you and make it easier to understand market trends.", name: "Ng Choon Wai", tag: "Telemarketer" },
+  { quote: "The learning curve is steep, but once you understand it, it does help me make better investment decisions in AI coins.", name: "Sandeep Kumar", tag: "Halyo user" },
+];
 const RELEASE_VERSION = "2026-10-13";
 
 // Use a real link so buying does not require the optional quiz and the
@@ -1807,7 +1818,17 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
             }}>Enter your key →</button>
           </div>
 
-          {/* Product evidence replaces unverified audience claims. */}
+
+          {/* Owner-supplied customer evidence, including offline marketing. */}
+          <div style={{marginTop:26,textAlign:"center"}}>
+            <div style={{fontSize:17,fontWeight:700,color:C.text,fontFamily:C.mono}}>
+              {CUSTOMER_COUNT.toLocaleString("en-US")} customers
+            </div>
+            <div style={{fontSize:12,color:C.dim,lineHeight:1.6,marginTop:5}}>
+              Including customers reached through offline marketing
+            </div>
+          </div>
+          {/* Product evidence complements customer feedback. */}
           <div style={{ display:"flex", justifyContent:"center", flexWrap:"wrap", gap:8, marginTop:30 }}>
             {["See the product before buying", "No wallet connection", "No trading signals"].map((item) => (
               <span key={item} style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:999,padding:"8px 12px",fontSize:11,color:C.dim,fontFamily:C.mono}}>{item}</span>
@@ -1884,6 +1905,26 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
           </div>
         </div>
 
+
+        {/* Owner-confirmed customer testimonials. Static cards avoid timed rotation. */}
+        <section aria-labelledby="halyo-feedback-heading" style={{marginTop:56}}>
+          <h2 id="halyo-feedback-heading" style={{textAlign:"center",fontSize:24,fontWeight:800,color:C.text,margin:"0 0 20px"}}>
+            What Halyo customers say
+          </h2>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,260px),1fr))",gap:14}}>
+            {TESTIMONIALS.map((item) => (
+              <figure key={item.name} style={{margin:0,background:C.panel,border:`1px solid ${C.line}`,borderRadius:14,padding:22,overflowWrap:"anywhere"}}>
+                <blockquote style={{margin:"0 0 18px",fontSize:15,color:C.text,lineHeight:1.7}}>
+                  “{item.quote}”
+                </blockquote>
+                <figcaption style={{fontSize:13,color:C.accent,fontWeight:700}}>
+                  {item.name}
+                  <span style={{display:"block",fontSize:12,color:C.dim,fontWeight:400,marginTop:4}}>{item.tag}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
         {/* how it works + FAQ */}
         <HalyoFaq />
 
