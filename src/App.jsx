@@ -1562,7 +1562,7 @@ const OFFER_PRICE_LABEL = "US$39";
 
 // Owner-confirmed offline learner total, corrected on 15 October 2026.
 // Learners are not paid orders; keep this separate from online sales metrics.
-const OFFLINE_LEARNER_COUNT = 11358;
+const LEARNER_COUNT = 11358;
 const TESTIMONIALS = [
   { quote: "I have been trading for years, and this app has helped me better understand and manage the risks involved in trading.", name: "Abdul Fayadh", tag: "Financial Analyst" },
   { quote: "So far, this application has suited my needs for learning about cryptocurrency.", name: "Joanne Ng", tag: "Sales Person" },
@@ -1830,10 +1830,10 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
           {/* Owner-confirmed offline learner evidence. */}
           <div style={{marginTop:26,textAlign:"center"}}>
             <div style={{fontSize:17,fontWeight:700,color:C.text,fontFamily:C.mono}}>
-              {OFFLINE_LEARNER_COUNT.toLocaleString("en-US")} offline learners
+              {LEARNER_COUNT.toLocaleString("en-US")} learners
             </div>
             <div style={{fontSize:12,color:C.dim,lineHeight:1.6,marginTop:5}}>
-              Reached through our offline learning and marketing activities
+              Reached through our marketing activities
             </div>
           </div>
           {/* Product evidence complements customer feedback. */}
