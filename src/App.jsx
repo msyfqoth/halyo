@@ -1532,6 +1532,8 @@ function classify(total, max) {
 // tags in index.html; this function routes events to them.
 function trackGoogle(event, data = {}) {
   if (typeof window === "undefined") return;
+  // Keep development/preview interactions out of production funnel totals.
+  if (!["halyoapp.com", "www.halyoapp.com"].includes(window.location.hostname)) return;
   const names = { InitiateCheckout: "begin_checkout", StartQuiz: "quiz_start" };
   const name = names[event] || event;
   // Purchases belong to verified checkout/order reporting, never this funnel.
