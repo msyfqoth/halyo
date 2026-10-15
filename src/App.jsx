@@ -1551,10 +1551,9 @@ const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf
 const OFFER_PRICE_USD = 39;
 const OFFER_PRICE_LABEL = "US$39";
 
-// Customer evidence supplied by the owner, including offline marketing.
-// Draft count follows the latest owner-provided App(1).jsx, not Ads/GA4 orders.
-// Keep this manually maintained figure separate from the online sales ledger.
-const CUSTOMER_COUNT = 1000;
+// Owner-confirmed offline learner total, corrected on 15 October 2026.
+// Learners are not paid orders; keep this separate from online sales metrics.
+const OFFLINE_LEARNER_COUNT = 11358;
 const TESTIMONIALS = [
   { quote: "I have been trading for years, and this app has helped me better understand and manage the risks involved in trading.", name: "Abdul Fayadh", tag: "Financial Analyst" },
   { quote: "So far, this application has suited my needs for learning about cryptocurrency.", name: "Joanne Ng", tag: "Sales Person" },
@@ -1819,13 +1818,13 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
           </div>
 
 
-          {/* Owner-supplied customer evidence, including offline marketing. */}
+          {/* Owner-confirmed offline learner evidence. */}
           <div style={{marginTop:26,textAlign:"center"}}>
             <div style={{fontSize:17,fontWeight:700,color:C.text,fontFamily:C.mono}}>
-              {CUSTOMER_COUNT.toLocaleString("en-US")} customers
+              {OFFLINE_LEARNER_COUNT.toLocaleString("en-US")} offline learners
             </div>
             <div style={{fontSize:12,color:C.dim,lineHeight:1.6,marginTop:5}}>
-              Including customers reached through offline marketing
+              Reached through our offline learning and marketing activities
             </div>
           </div>
           {/* Product evidence complements customer feedback. */}
@@ -1909,7 +1908,7 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
         {/* Owner-confirmed customer testimonials. Static cards avoid timed rotation. */}
         <section aria-labelledby="halyo-feedback-heading" style={{marginTop:56}}>
           <h2 id="halyo-feedback-heading" style={{textAlign:"center",fontSize:24,fontWeight:800,color:C.text,margin:"0 0 20px"}}>
-            What Halyo customers say
+            What Halyo learners say
           </h2>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,260px),1fr))",gap:14}}>
             {TESTIMONIALS.map((item) => (
