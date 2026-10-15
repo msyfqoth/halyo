@@ -1,83 +1,74 @@
-// ───────────────────────────────────────────────────────────────
-// Halyo — license key validation (NETLIFY Function)
-// Place this file at:  netlify/functions/validate-license.js
-// Your app will call it at:  /.netlify/functions/validate-license
-// (or /api/validate-license if you add the redirect in netlify.toml — see guide)
-//
-// ENV VARS to set in Netlify dashboard (Site settings → Environment variables):
-//   LEMONSQUEEZY_API_KEY   → your LS API key (LS → Settings → API)
-//   LEMONSQUEEZY_STORE_ID  → your Halyo store's numeric ID (optional)
-//
-// The API key is SECRET — it lives only here in Netlify's env, never in
-// the browser/app code.
-// ───────────────────────────────────────────────────────────────
+// Public Lemon Squeezy License API: no merchant API key is sent or needed.
+// Release gate: verify and configure the numeric Halyo STORE_ID and PRODUCT_ID.
+// A checkout buy UUID is not a product ID. Missing identity fails closed.
+const numericId = value => typeof value === "string" && /^[1-9]\d*$/.test(value.trim()) ? value.trim() : null;
 
 export async function handler(event) {
   const headers = {
-    "Access-Control-Allow-Origin": "*", // tighten to your domain in production
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+    "Cache-Control": "no-store",
   };
-
+  const reply = (statusCode, data) => ({ statusCode, headers, body: JSON.stringify(data) });
+  const deny = (statusCode, error) => reply(statusCode, { valid: false, error });
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers, body: "" };
-  if (event.httpMethod !== "POST")
-    return { statusCode: 405, headers, body: JSON.stringify({ valid: false, error: "Method not allowed" }) };
+  if (event.httpMethod !== "POST") return deny(405, "Method not allowed");
 
-  try {
-    const { licenseKey, instanceName } = JSON.parse(event.body || "{}");
-    if (!licenseKey || typeof licenseKey !== "string" || licenseKey.length < 8) {
-      return { statusCode: 400, headers, body: JSON.stringify({ valid: false, error: "Missing or malformed license key" }) };
-    }
-
-    const API = process.env.LEMONSQUEEZY_API_KEY;
-    const STORE_ID = process.env.LEMONSQUEEZY_STORE_ID; // optional
-    if (!API) return { statusCode: 500, headers, body: JSON.stringify({ valid: false, error: "Server not configured" }) };
-
-    // 1) VALIDATE the key with Lemon Squeezy
-    const vResp = await fetch("https://api.lemonsqueezy.com/v1/licenses/validate", {
+  let input;
+  try { input = JSON.parse(event.body || "{}"); }
+  catch { return deny(400, "Invalid request"); }
+  const licenseKey = typeof input?.licenseKey === "string" ? input.licenseKey.trim() : "";
+  const instanceName = typeof input?.instanceName === "string" ? input.instanceName.trim() : "";
+  const instanceId = typeof input?.instanceId === "string" ? input.instanceId.trim() : "";
+  if (licenseKey.length < 8 || licenseKey.length > 200 || instanceName.length > 200 || instanceId.length > 200 || (!instanceName && !instanceId)) {
+    return deny(400, "Enter a valid license key and browser instance");
+  }
+  const storeId = numericId(process.env.LEMONSQUEEZY_STORE_ID);
+  const productId = numericId(process.env.LEMONSQUEEZY_PRODUCT_ID);
+  if (!storeId || !productId) return deny(503, "License service is not configured. Please contact support.");
+  const belongsToHalyo = data => data?.meta && String(data.meta.store_id) === storeId && String(data.meta.product_id) === productId;
+  const knownStatus = data => ["active", "inactive"].includes(data?.license_key?.status);
+  const callLicenseApi = async (action, params) => {
+    const response = await fetch(`https://api.lemonsqueezy.com/v1/licenses/${action}`, {
       method: "POST",
       headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ license_key: licenseKey }),
+      body: new URLSearchParams(params),
+      signal: AbortSignal.timeout(10000),
     });
-    const vData = await vResp.json();
+    if (response.status === 429 || response.status >= 500) throw new Error("Upstream unavailable");
+    const data = await response.json();
+    return { ok: response.ok, data };
+  };
+  try {
+    const params = { license_key: licenseKey };
+    if (instanceId) params.instance_id = instanceId;
+    const validated = await callLicenseApi("validate", params);
+    const vData = validated.data;
+    if (!validated.ok || vData?.valid !== true || !knownStatus(vData)) return deny(200, "Invalid, expired or disabled license");
+    if (!belongsToHalyo(vData)) return deny(200, "This license is not for Halyo");
 
-    if (!vData || vData.valid !== true) {
-      return { statusCode: 200, headers, body: JSON.stringify({ valid: false, error: "Invalid or inactive license" }) };
+    let activationToken;
+    if (instanceId) {
+      // Revalidate the supplied instance; never activate another one on return.
+      if (vData.instance?.id !== instanceId || vData.license_key.status !== "active") return deny(200, "This browser instance is not active");
+      activationToken = instanceId;
+    } else {
+      const activated = await callLicenseApi("activate", { license_key: licenseKey, instance_name: instanceName });
+      const aData = activated.data;
+      if (!activated.ok || aData?.activated !== true || typeof aData.instance?.id !== "string" || !aData.instance.id.trim() || aData.license_key?.status !== "active" || !belongsToHalyo(aData)) {
+        return deny(200, "License activation could not be completed. Please contact support if you already activated this key.");
+      }
+      activationToken = aData.instance.id;
     }
-
-    // Optional: ensure the key belongs to YOUR store
-    if (STORE_ID && vData.meta && String(vData.meta.store_id) !== String(STORE_ID)) {
-      return { statusCode: 200, headers, body: JSON.stringify({ valid: false, error: "License not for this product" }) };
-    }
-
-    const status = vData.license_key?.status;
-    if (status && !["active", "inactive"].includes(status)) {
-      return { statusCode: 200, headers, body: JSON.stringify({ valid: false, error: `License ${status}` }) };
-    }
-
-    // 2) ACTIVATE (optional): bind key to one instance so it can't be shared endlessly
-    let activationToken = null;
-    if (instanceName) {
-      const aResp = await fetch("https://api.lemonsqueezy.com/v1/licenses/activate", {
-        method: "POST",
-        headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ license_key: licenseKey, instance_name: instanceName }),
-      });
-      const aData = await aResp.json();
-      if (aData && aData.activated) activationToken = aData.instance?.id || null;
-    }
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        valid: true,
-        customerName: vData.meta?.customer_name || null,
-        productName: vData.meta?.product_name || null,
-        activationToken,
-      }),
-    };
-  } catch (e) {
-    return { statusCode: 500, headers, body: JSON.stringify({ valid: false, error: "Validation failed, try again" }) };
+    return reply(200, {
+      valid: true,
+      customerName: vData.meta?.customer_name || null,
+      productName: vData.meta?.product_name || null,
+      activationToken,
+    });
+  } catch {
+    // No keys, upstream payloads or customer details in errors/logs.
+    return deny(503, "Couldn't reach the license service. Please try again.");
   }
 }
