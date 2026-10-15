@@ -1530,18 +1530,27 @@ function classify(total, max) {
 // Fires events to whatever ad pixels are loaded on the page (Meta, TikTok,
 // Google). Safe no-op if a pixel isn't installed. Add the pixel <script>
 // tags in index.html; this function routes events to them.
+function trackGoogle(event, data = {}) {
+  if (typeof window === "undefined") return;
+  // Keep development/preview interactions out of production funnel totals.
+  if (!["halyoapp.com", "www.halyoapp.com"].includes(window.location.hostname)) return;
+  const names = { InitiateCheckout: "begin_checkout", StartQuiz: "quiz_start" };
+  const name = names[event] || event;
+  // Purchases belong to verified checkout/order reporting, never this funnel.
+  if (!["begin_checkout", "quiz_start", "license_activation", "demo_start", "demo_complete"].includes(name)) return;
+  const payload = { ...data, send_to: "G-85ZCNXLSDS" };
+  if (name === "begin_checkout") {
+    payload.items = [{ item_id: "halyo-lifetime", item_name: "Halyo lifetime access", price: OFFER_PRICE_USD, quantity: 1 }];
+  }
+  try { window.gtag?.("event", name, payload); } catch { /* Tracking must never block product use. */ }
+}
+
 function track(event, data = {}) {
-  try {
-    if (typeof window === "undefined") return;
-    // Meta Pixel
-    if (window.fbq) window.fbq("track", event, data);
-    // TikTok Pixel
-    if (window.ttq) window.ttq.track(event, data);
-    // Google (gtag) — map to a generic event
-    if (window.gtag) window.gtag("event", event, data);
-    // Always leave a console breadcrumb so you can verify in testing
-    if (window.console) console.log("[track]", event, data);
-  } catch (e) {}
+  if (typeof window === "undefined") return;
+  // Keep existing advertising-pixel names; isolate failures between providers.
+  try { window.fbq?.("track", event, data); } catch { /* Optional pixel. */ }
+  try { window.ttq?.track(event, data); } catch { /* Optional pixel. */ }
+  trackGoogle(event, data);
 }
 
 // Your Lemon Squeezy checkout link for the intended Halyo US$39 offer.
@@ -1553,7 +1562,7 @@ const OFFER_PRICE_LABEL = "US$39";
 
 // Owner-confirmed offline learner total, corrected on 15 October 2026.
 // Learners are not paid orders; keep this separate from online sales metrics.
-const OFFLINE_LEARNER_COUNT = 11358;
+const LEARNER_COUNT = 11358;
 const TESTIMONIALS = [
   { quote: "I have been trading for years, and this app has helped me better understand and manage the risks involved in trading.", name: "Abdul Fayadh", tag: "Financial Analyst" },
   { quote: "So far, this application has suited my needs for learning about cryptocurrency.", name: "Joanne Ng", tag: "Sales Person" },
@@ -1821,10 +1830,10 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
           {/* Owner-confirmed offline learner evidence. */}
           <div style={{marginTop:26,textAlign:"center"}}>
             <div style={{fontSize:17,fontWeight:700,color:C.text,fontFamily:C.mono}}>
-              {OFFLINE_LEARNER_COUNT.toLocaleString("en-US")} offline learners
+              {LEARNER_COUNT.toLocaleString("en-US")} learners
             </div>
             <div style={{fontSize:12,color:C.dim,lineHeight:1.6,marginTop:5}}>
-              Reached through our offline learning and marketing activities
+              Reached through our marketing activities
             </div>
           </div>
           {/* Product evidence complements customer feedback. */}
@@ -2312,8 +2321,17 @@ function DemoLab({ onExit }){
   const [dataSource,setDataSource]=useState(null);
   const [attempt,setAttempt]=useState(0);
   const requestRef=useRef(null);
+  const startedRef=useRef(false);
+  const completedRef=useRef(false);
+  const [hasAdjusted,setHasAdjusted]=useState(false);
   const isSample=dataSource==="sample";
   const demoDate=t=>isSample?`Day ${Number(t)+1}`:fmtDate(t);
+
+  useEffect(()=>{
+    if(startedRef.current) return;
+    startedRef.current=true;
+    trackGoogle("demo_start", { demo_id: "moving_average" });
+  },[]);
 
   const useSample=()=>{
     requestRef.current?.abort();
@@ -2351,6 +2369,13 @@ function DemoLab({ onExit }){
   const train=useMemo(()=>data.length?runBacktest(data.slice(0,split),cfg):null,[data,split,fast,slow]);
   const test=useMemo(()=>data.length?runBacktest(data.slice(split),cfg):null,[data,split,fast,slow]);
   const full=useMemo(()=>data.length?runBacktest(data,cfg):null,[data,fast,slow]);
+
+  useEffect(()=>{
+    // Completion is one changed control with recomputed results, not a page view.
+    if(completedRef.current||!hasAdjusted||loadState!=="ok"||!train||!test) return;
+    completedRef.current=true;
+    trackGoogle("demo_complete", { demo_id: "moving_average", completion_method: "adjust_average", data_source: dataSource, sample_mode: isSample });
+  },[hasAdjusted,loadState,train,test,dataSource,isSample]);
 
   const verdict=useMemo(()=>{
     if(!train||!test) return null;
@@ -2417,11 +2442,11 @@ function DemoLab({ onExit }){
                 <div style={{padding:"6px 12px",background:C.panel2,border:`1px solid ${C.line}`,borderRadius:6,fontSize:13,fontFamily:C.mono}}>{isSample?"SAMPLE / PRICE UNITS":"TAO/USD"}</div>
                 <div style={{flex:"1 1 200px"}}>
                   <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Fast MA — <span style={{color:C.accent}}>{fast} days</span></div>
-                  <input type="range" min={2} max={50} value={fast} onChange={e=>setFast(Math.min(+e.target.value,slow-1))} style={{width:"100%",accentColor:C.accent}}/>
+                  <input type="range" min={2} max={50} value={fast} onChange={e=>{const next=Math.min(+e.target.value,slow-1);if(next!==fast){setFast(next);setHasAdjusted(true);}}} style={{width:"100%",accentColor:C.accent}}/>
                 </div>
                 <div style={{flex:"1 1 200px"}}>
                   <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Slow MA — <span style={{color:C.blue}}>{slow} days</span></div>
-                  <input type="range" min={5} max={120} value={slow} onChange={e=>setSlow(Math.max(+e.target.value,fast+1))} style={{width:"100%",accentColor:C.blue}}/>
+                  <input type="range" min={5} max={120} value={slow} onChange={e=>{const next=Math.max(+e.target.value,fast+1);if(next!==slow){setSlow(next);setHasAdjusted(true);}}} style={{width:"100%",accentColor:C.blue}}/>
                 </div>
               </div>
               <div style={{fontSize:11,color:C.dim,marginTop:12,lineHeight:1.5}}>When the {fast}-day average crosses above the {slow}-day, the strategy buys; when it crosses below, it sells. Drag to explore.</div>
