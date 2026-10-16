@@ -18,3 +18,28 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .halyo-checkout { max-width: 100%; overflow-wrap: anywhere; }
   input[type="text"], input:not([type]), select { font-size: 16px !important; }
 }
+.halyo-kicker { color:#4ade80; font-size:11px; letter-spacing:1.4px; text-transform:uppercase; font-weight:700; }
+.halyo-missions, .halyo-value-section { margin:28px 0; padding:24px; border:1px solid #263548; border-radius:16px; background:linear-gradient(145deg,#131e2a,#0d131c); overflow-wrap:anywhere; }
+.halyo-missions h2, .halyo-value-section h2 { font-size:clamp(21px,4vw,28px); letter-spacing:-.6px; line-height:1.2; margin:12px 0; color:#e2e8f0; }
+.halyo-missions p, .halyo-value-section p { font-size:14px; line-height:1.7; }
+.halyo-muted { color:#94a3b8; font-size:12px !important; line-height:1.6; }
+.halyo-mission-tabs { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0; }
+.halyo-mission-tabs button, .halyo-secondary, .halyo-choice { background:#111b28; border:1px solid #334155; border-radius:8px; color:#c8d3e0; font:inherit; font-size:13px; padding:12px 14px; cursor:pointer; min-height:44px; }
+.halyo-mission-tabs button[aria-pressed="true"] { background:#133025; border-color:#4ade80; color:#4ade80; }
+.halyo-mission-body { background:#0a1019; border:1px solid #263548; border-radius:12px; padding:20px; }
+.halyo-mission-body h3, .halyo-value-section h3 { margin:0 0 12px; font-size:17px; color:#e2e8f0; }
+.halyo-exercise-row { display:flex; flex-wrap:wrap; align-items:center; gap:20px; }
+.halyo-exercise-row p { flex:1 1 190px; }
+.halyo-choice { display:block; text-align:left; width:100%; margin:10px 0; line-height:1.5; }
+.halyo-action { background:#4ade80; color:#08120a; border:0; border-radius:8px; padding:14px 18px; min-height:44px; font:inherit; font-weight:750; cursor:pointer; }
+.halyo-action:disabled { opacity:.45; cursor:default; }
+.halyo-field { display:flex; flex-direction:column; gap:10px; margin:18px 0; color:#94a3b8; font-size:13px; line-height:1.5; }
+.halyo-field textarea, .halyo-field input:not([type="range"]) { width:100%; box-sizing:border-box; background:#111b28; border:1px solid #334155; border-radius:8px; padding:12px; color:#e2e8f0; font:inherit; font-size:16px; }
+.halyo-field input[type="range"] { width:100%; accent-color:#4ade80; min-height:32px; }
+.halyo-result-grid, .halyo-value-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr)); gap:14px; margin:16px 0; }
+.halyo-result-grid>div, .halyo-value-grid>div { background:#111b28; border:1px solid #263548; border-radius:10px; padding:18px; }
+.halyo-result-grid span, .halyo-result-grid small { display:block; color:#94a3b8; font-size:12px; }
+.halyo-result-grid strong { display:block; color:#e2e8f0; font-size:24px; margin:10px 0; }
+.halyo-journal-entry { border:1px solid #263548; padding:14px; border-radius:8px; margin:12px 0; }
+.halyo-journal-entry p { white-space:pre-wrap; }
+@media(max-width:600px) { .halyo-missions,.halyo-value-section { padding:18px 14px; } .halyo-mission-body { padding:16px 12px; } .halyo-mission-tabs button { flex:1 1 130px; } }

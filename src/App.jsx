@@ -4,6 +4,10 @@ import {
   ReferenceLine, Area, AreaChart,
 } from "recharts";
 import "./halyo.css";
+import { sma, runBacktest, walkForward, interpretTest, joinedEquity, createSampleData, validProgress } from "./learning.js";
+import { useLearningStore } from "./useLearningStore.js";
+import PracticeMissions, { CandlePair } from "./PracticeMissions.jsx";
+import PaperPractice from "./PaperPractice.jsx";
 
 // ─────────────────────────────────────────────────────────────
 // Halyo — the app. Three surfaces:
@@ -118,101 +122,9 @@ function mulberry32(a){return function(){a|=0;a=(a+0x6d2b79f5)|0;let t=Math.imul
 function genSeries(seed,n,startPrice,drift,vol){const rand=mulberry32(seed);const out=[];let price=startPrice;const start=Date.now()-n*86400000;for(let i=0;i<n;i++){const shock=(rand()+rand()+rand()-1.5)*vol;price=Math.max(0.01,price*(1+drift+shock));out.push({i,t:start+i*86400000,close:price});}return out;}
 const FALLBACK={"TAO/USD":{seed:7,start:300,drift:0.0015,vol:0.05},"NEAR/USD":{seed:21,start:3.5,drift:0.001,vol:0.045},"ICP/USD":{seed:33,start:5,drift:0.0012,vol:0.045},"RENDER/USD":{seed:51,start:4,drift:0.0013,vol:0.05},"LINK/USD":{seed:63,start:14,drift:0.001,vol:0.04},"FET/USD":{seed:77,start:0.7,drift:0.0012,vol:0.055},"GRT/USD":{seed:88,start:0.1,drift:0.0009,vol:0.05},"VIRTUAL/USD":{seed:95,start:0.6,drift:0.0014,vol:0.07},"WLD/USD":{seed:102,start:1.2,drift:0.0011,vol:0.06},"TIA/USD":{seed:110,start:3,drift:0.001,vol:0.05}};
 
-// ── indicators ──
-function sma(data,period){const out=new Array(data.length).fill(null);let sum=0;for(let i=0;i<data.length;i++){sum+=data[i].close;if(i>=period)sum-=data[i-period].close;if(i>=period-1)out[i]=sum/period;}return out;}
-function rsi(data,period=14){const out=new Array(data.length).fill(null);let gain=0,loss=0;for(let i=1;i<data.length;i++){const ch=data[i].close-data[i-1].close;const g=Math.max(0,ch),l=Math.max(0,-ch);if(i<=period){gain+=g;loss+=l;if(i===period){gain/=period;loss/=period;out[i]=100-100/(1+gain/(loss||1e-9));}}else{gain=(gain*(period-1)+g)/period;loss=(loss*(period-1)+l)/period;out[i]=100-100/(1+gain/(loss||1e-9));}}return out;}
-
-function runBacktest(data,cfg){
-  const{fast,slow,rsiFloor,rsiCeil,costBps,slipBps,useRsi,trendFilter}=cfg;
-  const fastMA=sma(data,fast),slowMA=sma(data,slow),rsiArr=rsi(data,14);
-  const trendMA=trendFilter?sma(data,100):null;
-  const perSideCost=(costBps+slipBps)/10000;
-  let inPos=false,entryPrice=0,equity=1,entryIdx=0;
-  const equitySeries=[],trades=[];
-  // Execution price for acting on a signal seen at bar i: use bar i+1's OPEN
-  // if available (honest — you can only act after the signal bar closes),
-  // otherwise fall back to bar i+1's close. Never the signal bar itself.
-  const execPrice=(i)=>{ const nb=data[i+1]; if(!nb) return null; return (nb.open!=null?nb.open:nb.close); };
-  for(let i=0;i<data.length;i++){
-    const f=fastMA[i],s=slowMA[i],r=rsiArr[i],pf=fastMA[i-1],ps=slowMA[i-1];
-    if(f!=null&&s!=null&&pf!=null&&ps!=null){
-      const cu=pf<=ps&&f>s,cd=pf>=ps&&f<s,rok=!useRsi||(r!=null&&r>rsiFloor&&r<rsiCeil);
-      const trendOk=!trendFilter||(trendMA[i]!=null&&data[i].close>trendMA[i]);
-      if(!inPos&&cu&&rok&&trendOk){
-        const px=execPrice(i); // enter next bar
-        if(px!=null){inPos=true;entryPrice=px*(1+perSideCost);entryIdx=i+1;}
-      }
-      else if(inPos&&cd){
-        const px=execPrice(i); // exit next bar
-        if(px!=null){const ex=px*(1-perSideCost);const ret=ex/entryPrice-1;equity*=1+ret;trades.push({entryT:data[entryIdx].t,exitT:data[i+1].t,entryPrice,exitPrice:ex,ret,bars:(i+1)-entryIdx});inPos=false;}
-      }
-    }
-    let me=equity;if(inPos)me=equity*(1+(data[i].close/entryPrice-1));
-    equitySeries.push({t:data[i].t,equity:me});
-  }
-  const buyHold=data.length?data[data.length-1].close/data[0].close-1:0;
-  const wins=trades.filter(t=>t.ret>0),losses=trades.filter(t=>t.ret<=0);
-  const grossWin=wins.reduce((a,t)=>a+t.ret,0),grossLoss=Math.abs(losses.reduce((a,t)=>a+t.ret,0));
-  let peak=-Infinity,maxDD=0;const rets=[];
-  for(let i=0;i<equitySeries.length;i++){const e=equitySeries[i].equity;peak=Math.max(peak,e);maxDD=Math.min(maxDD,e/peak-1);if(i>0)rets.push(equitySeries[i].equity/equitySeries[i-1].equity-1);}
-  const mean=rets.reduce((a,b)=>a+b,0)/(rets.length||1);
-  const sd=Math.sqrt(rets.reduce((a,b)=>a+(b-mean)**2,0)/(rets.length||1));
-  return{equitySeries,trades,fastMA,slowMA,rsiArr,metrics:{totalReturn:equity-1,buyHold,winRate:trades.length?wins.length/trades.length:0,expectancy:trades.length?trades.reduce((a,t)=>a+t.ret,0)/trades.length:0,profitFactor:grossLoss?grossWin/grossLoss:(grossWin>0?Infinity:0),avgWin:wins.length?grossWin/wins.length:0,avgLoss:losses.length?-grossLoss/losses.length:0,maxDD,sharpe:sd?(mean/sd)*Math.sqrt(365):0,nTrades:trades.length}};
-}
-
 const fmtPct=(x)=>(x==null||!isFinite(x)?"—":`${(x*100).toFixed(1)}%`);
 const fmtNum=(x)=>(x==null||!isFinite(x)?"—":x.toFixed(2));
 const fmtDate=(t)=>new Date(t).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"2-digit"});
-
-// ── multi-period test (segmented consistency check) ──
-// NOTE: this is NOT true walk-forward optimisation (which re-fits parameters
-// on each in-sample window and tests on the next out-of-sample window). It
-// splits the series into N sequential segments and backtests each with the
-// SAME fixed parameters, to show whether results are consistent across time
-// or came from one lucky stretch. Labelled "multi-period test" in the UI to
-// avoid overclaiming. True walk-forward is a roadmap item.
-function walkForward(data,cfg,folds=5){
-  if(data.length<folds*30)folds=Math.max(2,Math.floor(data.length/40));
-  const foldSize=Math.floor(data.length/folds);
-  const windows=[];
-  let allTrades=[];
-  for(let k=0;k<folds;k++){
-    const start=k*foldSize;
-    const end=k===folds-1?data.length:(k+1)*foldSize;
-    const slice=data.slice(start,end);
-    if(slice.length<25)continue;
-    const bt=runBacktest(slice,cfg);
-    const wins=bt.trades.filter(t=>t.ret>0).length;
-    windows.push({
-      idx:k+1,
-      from:slice[0].t,
-      to:slice[slice.length-1].t,
-      winRate:bt.trades.length?wins/bt.trades.length:null,
-      nTrades:bt.trades.length,
-      ret:bt.metrics.totalReturn,
-      maxDD:bt.metrics.maxDD,
-    });
-    allTrades=allTrades.concat(bt.trades);
-  }
-  // aggregate across every out-of-sample trade
-  const wins=allTrades.filter(t=>t.ret>0),losses=allTrades.filter(t=>t.ret<=0);
-  const grossWin=wins.reduce((a,t)=>a+t.ret,0),grossLoss=Math.abs(losses.reduce((a,t)=>a+t.ret,0));
-  let compound=1;allTrades.forEach(t=>{compound*=1+t.ret;});
-  const profitableWindows=windows.filter(w=>w.ret>0).length;
-  return{
-    windows,
-    agg:{
-      winRate:allTrades.length?wins.length/allTrades.length:0,
-      nTrades:allTrades.length,
-      expectancy:allTrades.length?allTrades.reduce((a,t)=>a+t.ret,0)/allTrades.length:0,
-      profitFactor:grossLoss?grossWin/grossLoss:(grossWin>0?Infinity:0),
-      totalReturn:compound-1,
-      profitableWindows,
-      totalWindows:windows.length,
-      consistency:windows.length?profitableWindows/windows.length:0,
-    },
-  };
-}
 
 // ── strategy presets by risk profile ──
 const STRATS={
@@ -232,11 +144,11 @@ const CURRICULUM=[
     module:"1 · Crypto & markets, from zero",
     blurb:"No prior knowledge needed. What crypto is, how a price is made, and the words you'll keep hearing.",
     lessons:[
-      {t:"What is cryptocurrency, really?",m:"3 min",body:"Cryptocurrency is digital money that isn't controlled by any bank or government. Instead, a huge shared record (the 'blockchain') is kept by thousands of computers at once, and they all agree on who owns what. Bitcoin was the first; there are now thousands. For a trader, the key point is simpler than the technology: crypto is an asset whose price moves — often violently — because people buy and sell it. You don't need to understand the deep tech to trade it, but you do need to respect how fast it can move."},
+      {t:"What is cryptocurrency, really?",m:"3 min",body:"Crypto assets use cryptographic records, often on a blockchain, to represent value or rights. Their control differs: some networks are decentralised, while other tokens depend heavily on an issuer. A blockchain records transfers across a network of computers. Bitcoin was the first; there are now thousands. For a trader, the key point is simpler than the technology: crypto is an asset whose price moves — often violently — because people buy and sell it. You don't need to understand the deep tech to trade it, but you do need to respect how fast it can move."},
       {t:"How a price actually forms",m:"3 min",body:"A price isn't set by anyone — it's just the last amount someone agreed to pay. At any moment there are buyers (bidding) and sellers (asking). When a buyer accepts a seller's price, a trade happens, and that becomes 'the price.' When more people urgently want to buy, price rises; when more urgently want to sell, it falls. That's it. Every chart you'll ever see is just millions of these little agreements, plotted over time."},
       {t:"Coins, tokens, and market cap",m:"3 min",body:"Bitcoin and Ethereum have their own blockchains — those are 'coins.' Thousands of smaller projects build on top of existing chains — those are 'tokens.' A useful honesty filter is market cap: price per coin times the number in circulation. A token priced at $0.001 isn't 'cheap' if there are trillions of them — it could still be worth more than Bitcoin in total. Beginners get fooled by low per-coin prices constantly. Always look at the total value, not the sticker price."},
       {t:"The words you'll keep hearing",m:"4 min",body:"A quick plain-language glossary. Volatility: how wildly price swings (crypto is very high). Liquidity: how easily you can buy/sell without moving the price. Market order: buy/sell right now at whatever price. Limit order: buy/sell only at a price you set. Spread: the small gap between the buy and sell price — a hidden cost. Bull market: prices generally rising; bear market: generally falling. Don't memorise these — you'll absorb them as you go."},
-      {t:"Why crypto is riskier than most markets",m:"3 min",body:"Honest truth up front: crypto moves far more than stocks. A 10–20% move in a day is normal; it can happen while you sleep (crypto trades 24/7). Prices can also be pushed around by hype, rumours, and large holders. This isn't a reason to avoid it — it's a reason to size your risk small and never trade money you can't afford to lose. Everything else in this course builds on that one rule."},
+      {t:"Why crypto is riskier than most markets",m:"3 min",body:"Honest truth up front: crypto moves far more than stocks. Large daily moves are possible; conditions differ by asset and period, and crypto trades 24/7. Prices can also be pushed around by hype, rumours, and large holders. This isn't a reason to avoid it — it's a reason to size your risk small and never trade money you can't afford to lose. Everything else in this course builds on that one rule."},
     ],
   },
   {
@@ -245,7 +157,7 @@ const CURRICULUM=[
     lessons:[
       {t:"Exchanges: where you actually buy",m:"3 min",body:"An exchange is a marketplace where you swap regular money for crypto and back. Big, established, regulated exchanges are the sensible starting point — they're more likely to still be there next year and to let you withdraw. Be wary of obscure exchanges promising bonuses; 'we can't process your withdrawal' is a classic trap. Rule of thumb: an exchange you can't easily get your money *out* of is not an exchange, it's a hole."},
       {t:"Wallets and 'not your keys'",m:"4 min",body:"A wallet holds your crypto. Money left on an exchange is really controlled by the exchange — if it collapses or freezes, your funds can vanish (this has happened repeatedly). A personal wallet gives you a secret 'private key' or 'seed phrase' that only you hold. The saying is 'not your keys, not your coins.' For trading you'll keep some on an exchange for convenience, but understand the trade-off: convenience means trusting someone else with your money."},
-      {t:"Security: protecting yourself",m:"4 min",body:"Crypto is a magnet for theft because transactions can't be reversed. Non-negotiables: use a strong, unique password and two-factor authentication (app-based, not SMS). Never, ever share your seed phrase — no legitimate person or 'support agent' will ever ask for it. Anyone who does is stealing from you. Write your seed phrase on paper, never in a photo or cloud note. Most crypto losses aren't bad trades — they're stolen funds and scams."},
+      {t:"Security: protecting yourself",m:"4 min",body:"Crypto is a magnet for theft because transactions can't be reversed. Non-negotiables: use a strong, unique password and two-factor authentication (app-based, not SMS). Never, ever share your seed phrase — no legitimate person or 'support agent' will ever ask for it. Anyone who does is stealing from you. Write your seed phrase on paper, never in a photo or cloud note. Scams and theft are important risks alongside trading losses."},
       {t:"Spotting scams before they get you",m:"5 min",body:"Now the big one. Run from anyone promising guaranteed returns, '90% win rates,' 'signals that can't lose,' or urgency ('buy now or miss out'). Real trading has no certainties — anyone claiming otherwise is selling you something. Be suspicious of screenshots of huge profits (trivially faked), 'gurus' whose real income is course sales, giveaway schemes ('send 1 coin, get 2 back' — always a theft), and romance/'investment mentor' messages. If it sounds too good to be true in crypto, it is — every single time."},
     ],
   },
@@ -256,7 +168,7 @@ const CURRICULUM=[
       {t:"Candlesticks: the four numbers",m:"3 min",body:"Each candle covers one time period and shows four prices: where it Opened, where it Closed, and the Highest and Lowest it reached. The thick 'body' spans open-to-close; the thin 'wicks' reach the high and low. Green means it closed higher than it opened (buyers won that period); red means it closed lower (sellers won). That's the whole language. Open the Candles tab to see this interactively."},
       {t:"Timeframes change everything",m:"3 min",body:"The same market looks completely different on a 1-hour chart versus a daily or weekly one. A scary 'crash' on the 1-hour chart can be a tiny wiggle on the weekly. Short timeframes are noisier, more stressful, and cost more (you trade more often). Longer timeframes are calmer and cheaper. Beginners almost always trade timeframes that are too short. When in doubt, zoom out — the bigger picture lies to you less."},
       {t:"What a trend is (and isn't)",m:"3 min",body:"A trend is simply price generally moving one direction over time — higher highs and higher lows for an uptrend, the reverse for a downtrend. Most trading strategies are bets that a trend will continue. The honest catch: you can only ever see a trend clearly in the past. In the moment, you never know if it's continuing or about to reverse. Anyone who says they know is guessing."},
-      {t:"The honest truth about patterns",m:"4 min",body:"You'll see endless content claiming candle patterns (hammers, dojis, engulfing) predict the next move. Here's the honest version: the research is mixed. Some rigorous studies find certain patterns carry a little predictive information; others find essentially none — and critically, studies repeatedly show that whatever small edge exists tends to vanish once real trading costs are included. Learn the patterns so you understand the language traders use, but treat 'this pattern means price will go up' with deep skepticism. The Lab lets you test whether any pattern-based idea actually survives costs."},
+      {t:"The honest truth about patterns",m:"4 min",body:"You'll see endless content claiming candle patterns (hammers, dojis, engulfing) predict the next move. Here's the honest version: the research is mixed. Some rigorous studies find certain patterns carry a little predictive information; others find essentially none — and critically, studies repeatedly show that whatever small edge exists tends to vanish once real trading costs are included. Learn the patterns so you understand the language traders use, but treat 'this pattern means price will go up' with deep skepticism. The candle exercises teach recognition. The Lab tests moving-average crossover rules with optional filters; it does not test candlestick-pattern entry rules."},
     ],
   },
   {
@@ -275,8 +187,8 @@ const CURRICULUM=[
     lessons:[
       {t:"Market vs limit orders",m:"3 min",body:"A market order buys or sells immediately at whatever price is available — fast, but you take whatever you get. A limit order only executes at a price you set or better — you control the price, but it might never fill. Beginners default to market orders and quietly lose money to bad fills in fast-moving crypto. Learning to use limit orders is one of the simplest ways to stop leaking money on every trade."},
       {t:"Stop orders: your safety net",m:"3 min",body:"A stop order automatically sells if price falls to a level you set — it's how you cap a loss without watching the screen 24/7. Deciding your stop *before* you enter, when you're calm, is one of the most protective habits in trading. The catch in crypto: violent moves can 'gap' past your stop, so it's a safety net, not a guarantee. Still, having one beats the alternative — hoping a loss comes back while it gets worse."},
-      {t:"Fees, spread, and slippage",m:"4 min",body:"Three costs eat every trade. Fees: what the exchange charges per trade. Spread: the gap between the buy and sell price — you cross it every time. Slippage: getting a slightly worse price than you saw, common in fast markets. Individually tiny; together, and multiplied by frequent trading, they're brutal. This is why overtrading kills accounts. Halyo includes these costs in every backtest by default — because a strategy that ignores them isn't telling the truth."},
-      {t:"Leverage: the fastest way to zero",m:"3 min",body:"Leverage lets you trade with borrowed money — control $1000 with $100. It multiplies gains and losses equally, which sounds fine until you realise a small move against you can wipe out your whole stake ('liquidation'). Most beginners who use leverage lose everything fast. Honest advice: as a beginner, don't. There is no rush that justifies it. Master unleveraged trading first — most people never should touch leverage at all."},
+      {t:"Fees, spread, and slippage",m:"4 min",body:"Three costs eat every trade. Fees: what the exchange charges per trade. Spread: the gap between the buy and sell price — you cross it every time. Slippage: getting a slightly worse price than you saw, common in fast markets. Individually tiny; together, and multiplied by frequent trading, they're brutal. This is why overtrading kills accounts. Halyo uses explicit fee and slippage assumptions. They are simplified estimates, not the exact charges of your exchange."},
+      {t:"Leverage: the fastest way to zero",m:"3 min",body:"Leverage lets you trade with borrowed money — control $1000 with $100. It multiplies gains and losses equally, which sounds fine until you realise a small move against you can wipe out your whole stake ('liquidation'). Leverage can wipe out a position quickly. Honest advice: as a beginner, don't. There is no rush that justifies it. Master unleveraged trading first — most people never should touch leverage at all."},
     ],
   },
   {
@@ -284,8 +196,8 @@ const CURRICULUM=[
     blurb:"The heart of Halyo: how to check whether an idea actually works — honestly.",
     lessons:[
       {t:"What backtesting means",m:"3 min",body:"A backtest asks: 'if I had followed this exact rule over the last two years, what would have happened?' The computer replays history, taking every buy and sell the rule would have made, and tallies the result. It's the single most useful skill in trading — because it replaces 'I think this works' with 'let's check.' But a backtest is only as honest as its assumptions, which the next lessons cover."},
-      {t:"Why 'looked great' usually isn't",m:"4 min",body:"If you adjust a strategy's settings until its past results look amazing, you've usually just fitted it to the random noise of that specific period — a trap called overfitting. It won't repeat. The defence is testing 'out-of-sample': build the idea on older data, then judge it only on newer data it never saw. If the result falls apart on the unseen data, the strategy was fooling you. Always trust the unseen test, never the tuned past."},
-      {t:"Costs: the silent killer of strategies",m:"3 min",body:"Every trade costs you — fees, the spread, and slippage. It sounds tiny, but a strategy that trades often bleeds out through costs. Many strategies that look profitable on paper are losers once realistic costs are included. Halyo includes costs in every result by default. A rule that only works with zero costs doesn't actually work. In the Lab, slide the cost setting up and watch 'winners' turn into losers."},
+      {t:"Why 'looked great' usually isn't",m:"4 min",body:"Repeatedly adjusting settings until historical results look good can fit noise rather than a repeatable pattern. This is overfitting. A useful discipline is choosing settings on an earlier window and recording them before examining a later window. Once you use the later results to tune settings, they are no longer a fresh test. Differences between periods can also reflect changing market conditions. Halyo shows both windows for learning; it does not fit a model or prove future performance."},
+      {t:"Costs: the silent killer of strategies",m:"3 min",body:"Every trade costs you — fees, the spread, and slippage. It sounds tiny, but a strategy that trades often bleeds out through costs. Many strategies that look profitable on paper are losers once realistic costs are included. Halyo includes assumed fees and slippage by default. A result that depends on zero costs may not survive actual trading costs. In the Lab, slide the cost setting up and watch 'winners' turn into losers."},
       {t:"One good result is not proof",m:"4 min",body:"A strategy that worked in one period might have just been lucky. The stronger test is consistency: does it hold up across many separate time windows, and different assets? If it only worked in one lucky stretch, that's a warning, not a green light. Robustness — working reasonably across many conditions — matters far more than one spectacular result. Halyo's multi-period test is built for exactly this check."},
       {t:"Comparing against buy-and-hold",m:"3 min",body:"Here's a humbling benchmark every strategy must beat: what if you'd just bought and held? All that trading, all those decisions and costs — did they actually do better than doing nothing? Very often, honestly, they don't. Halyo always shows the buy-and-hold return beside your strategy's. If your clever system can't beat simply holding, that's not a failure of the tool — it's the tool telling you the truth most people never hear."},
     ],
@@ -294,7 +206,7 @@ const CURRICULUM=[
     module:"7 · Staying alive (risk management)",
     blurb:"The most important module. Most traders lose — this is how you avoid ruin.",
     lessons:[
-      {t:"Why survival beats being right",m:"3 min",body:"Here's the most honest thing in this whole course, and it's backed by hard data: most people who trade actively lose money. Regulator and academic studies consistently land in the same range — a landmark study of persistent day traders found around 97% lost money; European regulators' own disclosures show 74–89% of retail CFD/forex traders lose. The traders who last aren't the ones who are right most often — they're the ones who never let a single loss be catastrophic. Your first job isn't to make money; it's to not blow up. Survive, and you get to keep learning. See 'The evidence' at the end of this course for sources."},
+      {t:"Why survival beats being right",m:"3 min",body:"Losses can happen even when a rule looks persuasive. Your aim in these exercises is to understand assumptions, downside and uncertainty before considering any financial decision. Research on losses must be read in context: a study of futures or CFD accounts does not measure all crypto traders. See the evidence lesson for original sources and their scope. Practice results do not establish that you can trade profitably."},
       {t:"Position sizing: the real skill",m:"4 min",body:"Position sizing means deciding how much to put into any single trade. The common rule: risk only a small, fixed fraction of your capital — often 1–2% — on any one trade. That way, even a string of losses can't ruin you. Higher-volatility assets (most crypto) need smaller positions for the same risk. This one habit protects you more than any clever entry signal ever will. Boring? Yes. It's also what keeps you in the game."},
       {t:"The maths of losing (and recovering)",m:"3 min",body:"Losses hurt more than equal gains help, and the maths is brutal: lose 50% and you need a 100% gain just to break even. Lose 80% and you need 400%. This is exactly why avoiding big losses matters more than chasing big wins — a single oversized loss can undo years of careful gains. Small, controlled losses are survivable; large ones often aren't. Size accordingly."},
       {t:"Never risk what you can't lose",m:"2 min",body:"The simplest, most important rule, stated plainly: only ever trade with money whose complete loss wouldn't damage your life. Not rent money, not savings you need, never borrowed money. Crypto can and does go to zero. If losing the amount would hurt you, the position is too big — or you shouldn't be in it at all. This isn't cautious pessimism; it's how responsible traders think."},
@@ -317,8 +229,8 @@ const CURRICULUM=[
       {t:"How to read Halyo's honest signals",m:"3 min",body:"Halyo's 'current read' just tells you which side of its moving averages price is on right now — descriptive, not a 'buy' button. It's one input, to be weighed alongside the backtested stats and your own judgement. The app deliberately never tells you to trade. Its job is to show you what a rule would have done and let you think for yourself — the opposite of a signal group that tells you to act."},
       {t:"A sensible way to practise",m:"3 min",body:"Here's an honest path: learn the concepts here, use the Lab to test simple strategies and see how often they fail out-of-sample, and only then — if at all — consider tiny real amounts you can fully afford to lose. Treat your first months as tuition, not income. The goal isn't fast profit; it's becoming someone who understands what they're doing. Most who rush lose; those who learn patiently give themselves a real chance."},
       {t:"Building your first simple plan",m:"4 min",body:"Put it all together into one page: which asset and timeframe you'll watch, one strategy you've actually tested in the Lab, the fixed small percentage you'll risk per trade, where your stop goes, and the conditions under which you simply won't trade. That's a complete plan — most people never write one. Test it, paper-trade it, journal it. The plan will be boring and modest. Boring and modest is exactly what survives."},
-      {t:"Your honest expectations",m:"2 min",body:"To close, the most honest thing we can tell you, and it's supported by decades of data: most people who trade crypto actively do not beat simply buying and holding, and the majority lose money. That's not meant to discourage you — it's meant to arm you. If you go in expecting a get-rich scheme, you'll be the one who gets hurt. If you go in to learn, manage risk, and make thoughtful decisions, you're already ahead of the crowd. That mindset is the whole point of Halyo. The final lesson lists the research behind these claims."},
-      {t:"The evidence (sources)",m:"3 min",body:"We'd rather show our homework than ask you to trust us. On most traders losing: a widely-cited 2020 study of Brazilian futures day traders who persisted 300+ days found ~97% lost money (Chague, De-Losso & Giovannetti). The European regulator ESMA's mandated broker disclosures show 74–89% of retail CFD/forex accounts lose. India's regulator SEBI found ~89% of individual equity F&O traders lost money (2019–22). On strategies: cryptocurrency moving-average and momentum studies are genuinely mixed — some (e.g. work following Jegadeesh & Titman's momentum research) find an edge in certain assets/periods, while others (e.g. Grobys & Sapkota, 2019) find no significant payoff, and Bessembinder & Chan-style findings show apparent profits often disappear once trading costs are included. That mix is the whole reason Halyo makes you test rather than trust. None of this is financial advice; markets change and past results never guarantee future ones."},
+      {t:"Your honest expectations",m:"2 min",body:"Halyo is a learning environment, not an income plan. Historical tests depend on the chosen data, dates, execution assumptions and costs. They cannot establish future returns, and a good quiz score does not establish trading ability. Use the exercises to explain what a result can and cannot show. You may decide that taking no financial risk is the right outcome for you."},
+      {t:"The evidence (sources)",m:"3 min",body:"Read original sources and check the market, dates and assumptions before applying a finding. BIS Bulletin69 (20 February2023) studies crypto activity around shocks such as Terra/Luna and FTX; its findings describe that dataset and period, not a guaranteed loss rate for every trader. ESMA's2018 CFD analysis concerns retail CFD accounts, not all spot-crypto users. TradingView's strategy documentation explains simulation, trading costs and testing biases. These sources provide context; none validates Halyo's educational outcomes or predicts what your strategy will earn. Links are below."},
     ],
   },
 ];
@@ -366,8 +278,8 @@ function TradingViewChart({ symbol }){
   );
 }
 
-function TradeApp({ initialProfile = "Balanced" }){
-  const [tab,setTab]=useState("trade"); // trade | lab | learn
+export function TradeApp({ initialProfile = "Balanced", initialTab = "trade" }){
+  const [tab,setTab]=useState(initialTab); // trade | lab | learn
   const [profile,setProfile]=useState(initialProfile);
   const [showTutorial,setShowTutorial]=useState(true); // first-run
   const [tutStep,setTutStep]=useState(0);
@@ -379,6 +291,7 @@ function TradeApp({ initialProfile = "Balanced" }){
     setHasNewRelease(false);
   };
   const [openLesson,setOpenLesson]=useState(null);
+  const [lessonProgress,setLessonProgress,lessonStorageOk]=useLearningStore("halyo_lessons_v1",{},validProgress);
 
   // ── Lab (strategy sandbox) state — independent of the Trade tab ──
   const [labAsset,setLabAsset]=useState("TAO/USD");
@@ -402,13 +315,6 @@ function TradeApp({ initialProfile = "Balanced" }){
   const [coinQuery,setCoinQuery]=useState("");
   const [coinOpen,setCoinOpen]=useState(null);
   const [coinRisk,setCoinRisk]=useState("all"); // all | high | very high | medium-high
-
-  // ── Paper practice (simulated trading, fake money) ──
-  const [paperCash,setPaperCash]=useState(10000);       // virtual balance
-  const [paperPos,setPaperPos]=useState(null);          // {entryPrice, units, reason, stop}
-  const [paperLog,setPaperLog]=useState([]);            // closed trades journal
-  const [paperReason,setPaperReason]=useState("");
-  const [paperStop,setPaperStop]=useState("");
 
   const preset=STRATS[profile]||STRATS["Balanced"];
   const [asset,setAsset]=useState(preset.defaultAsset);
@@ -477,20 +383,10 @@ function TradeApp({ initialProfile = "Balanced" }){
   const labDeps=[labData,labSplit,labFast,labSlow,labMode,labUseRsi,labRsiFloor,labRsiCeil,labCost,labTrendFilter];
   const labTrain=useMemo(()=>labData.length?runBacktest(labData.slice(0,labSplit),labCfg):null,labDeps);
   const labTest=useMemo(()=>labData.length?runBacktest(labData.slice(labSplit),labCfg):null,labDeps);
-  const labFull=useMemo(()=>labData.length?runBacktest(labData,labCfg):null,labDeps);
-  const labEquity=useMemo(()=>(labTrain&&labTest)?[...labTrain.equitySeries,...labTest.equitySeries]:[],[labTrain,labTest]);
+  const labEquity=useMemo(()=>(labTrain&&labTest)?joinedEquity(labTrain,labTest):[],[labTrain,labTest]);
 
   // Plain-language interpretation of the lab result — teaches, doesn't advise.
-  const labVerdict=useMemo(()=>{
-    if(!labTrain||!labTest) return null;
-    const tr=labTrain.metrics.totalReturn, te=labTest.metrics.totalReturn, bh=labFull?.metrics.buyHold??0;
-    const fewTrades=(labTest.metrics.nTrades||0)<5;
-    if(fewTrades) return {tone:C.dim, text:"Very few trades in the out-of-sample period — not enough to judge. Try a longer history or faster averages so there's more to learn from."};
-    if(tr>0.15 && te<=0) return {tone:C.danger, text:"Classic overfitting: strong on data it trained on, but it lost on data it never saw. Looking good on the past doesn't mean it works going forward — this is the trap most 'winning' strategies fall into."};
-    if(te>0 && te<bh) return {tone:C.warn, text:"It made money out-of-sample, but less than simply buying and holding would have — after all that effort, doing nothing beat it. Common, and worth sitting with."};
-    if(te>0 && te>=bh) return {tone:C.accent, text:"It held up on unseen data and beat buy-and-hold here. Encouraging — but one window isn't proof. Change the asset or split and see if it survives. Robustness matters more than one good result."};
-    return {tone:C.warn, text:"Modest or negative out-of-sample result. That's the honest norm — most simple strategies don't beat the market after costs. The point is learning to see that clearly."};
-  },[labTrain,labTest,labFull]);
+  const labVerdict=useMemo(()=>labTrain&&labTest?{tone:C.dim,text:interpretTest(labTrain,labTest)}:null,[labTrain,labTest]);
 
   const dp=COINS[asset].dp;
   let stance="NEUTRAL",curRsi=null,lastBar=null,cf=null,cs=null;
@@ -523,7 +419,7 @@ function TradeApp({ initialProfile = "Balanced" }){
   const TUT=[
     {title:"Welcome to Halyo",body:"This is an analysis and learning tool — not a trading bot and not financial advice. It shows you how strategies would have behaved on real data, honestly. Let's take 30 seconds to show you around. You can skip anytime and reopen this from the Guide button.",cta:"Show me around"},
     {title:"Your matched strategy",body:"Based on your risk profile, the app preloads a strategy style and asset. Conservative leans to slower signals on BTC; Aggressive to faster signals on higher-volatility coins. You can switch profiles and assets anytime up top.",cta:"Next"},
-    {title:"The numbers are out-of-sample",body:"Win rate, expectancy, and drawdown are measured on a test window the strategy never trained on — after fees and slippage. That's the honest way to judge a strategy. A number here is history, never a promise.",cta:"Next"},
+    {title:"Compare historical windows carefully",body:"Results use earlier and later windows with assumed costs. No model is trained. If you tune settings after seeing the later result, you introduce hindsight. A historical result is not a forecast.",cta:"Next"},
     {title:"The current read is descriptive",body:"The bullish/bearish read tells you which side of its moving averages price sits on right now. It is NOT a 'buy now' signal. Use it as one input, alongside the Learn lessons and your own judgement.",cta:"Next"},
     {title:"Start with the lessons",body:"If any term is unfamiliar, the Learn tab explains crossovers, why win rate alone misleads, overfitting, and position sizing — in plain language. You keep full control of every decision and every dollar.",cta:"Start using Halyo"},
   ];
@@ -856,14 +752,14 @@ function TradeApp({ initialProfile = "Balanced" }){
 
                 {/* equity */}
                 <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"14px 12px 6px",marginBottom:16}}>
-                  <div style={{fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:C.dim,marginBottom:8,paddingLeft:6}}>Equity curve · train → test</div>
+                  <div style={{fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:C.dim,marginBottom:8,paddingLeft:6}}>Linked equity · earlier → later</div>
                   <ResponsiveContainer width="100%" height={210}>
                     <AreaChart data={equityChart} margin={{top:4,right:8,left:-18,bottom:0}}>
                       <defs><linearGradient id="eq" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.accent} stopOpacity={0.25}/><stop offset="100%" stopColor={C.accent} stopOpacity={0}/></linearGradient></defs>
                       <XAxis dataKey="t" tickFormatter={fmtDate} tick={{fill:C.dim,fontSize:10}} stroke={C.line} minTickGap={60}/>
                       <YAxis tickFormatter={v=>`${(v*100).toFixed(0)}`} tick={{fill:C.dim,fontSize:10}} stroke={C.line} domain={["auto","auto"]}/>
                       <Tooltip contentStyle={{background:C.panel2,border:`1px solid ${C.line}`,borderRadius:8,fontSize:11,fontFamily:C.mono}} labelFormatter={fmtDate} formatter={v=>[`${(v*100).toFixed(1)}%`,"equity"]}/>
-                      <ReferenceLine x={data[splitIdx]?.t} stroke={C.blue} strokeDasharray="4 4" label={{value:"test →",fill:C.blue,fontSize:10,position:"insideTopRight"}}/>
+                      <ReferenceLine x={data[splitIdx]?.t} stroke={C.blue} strokeDasharray="4 4" label={{value:"later →",fill:C.blue,fontSize:10,position:"insideTopRight"}}/>
                       <ReferenceLine y={1} stroke={C.line}/>
                       <Area type="monotone" dataKey="equity" stroke={C.accent} strokeWidth={1.6} fill="url(#eq)" dot={false} isAnimationActive={false}/>
                     </AreaChart>
@@ -994,7 +890,7 @@ function TradeApp({ initialProfile = "Balanced" }){
               <h2 style={{fontSize:24,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px",color:C.text}}>Strategy Lab</h2>
               <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:0,maxWidth:640}}>
                 Build a strategy and see honestly how it would have performed — after costs, split
-                into what it "trained" on vs. data it never saw. Start Simple, then add complexity.
+                into earlier and later historical windows. Start Simple, then add complexity.
                 This is for <strong style={{color:C.text}}>learning how strategies behave</strong>, not finding one to trade.
               </p>
             </div>
@@ -1013,7 +909,7 @@ function TradeApp({ initialProfile = "Balanced" }){
             <div style={{fontSize:11.5,color:C.dim,marginBottom:14,lineHeight:1.5}}>
               {labMode==="simple" && "Simple: just the two moving averages. The cleanest way to see a crossover strategy."}
               {labMode==="medium" && "Medium: add an RSI filter, adjust trading costs, and choose how much history to test on."}
-              {labMode==="advanced" && "Advanced: add a long-term trend filter and change the train/test split. Watch how easy it is to 'tune' great in-sample numbers that fall apart out-of-sample — that's the overfitting trap."}
+              {labMode==="advanced" && "Advanced: add a long-term trend filter and change the earlier/later split. Repeated tuning against either visible window uses hindsight; no model is trained."}
             </div>
 
             {/* controls */}
@@ -1064,7 +960,7 @@ function TradeApp({ initialProfile = "Balanced" }){
                     </>
                   )}
                   <div style={{flex:"1 1 150px"}}>
-                    <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Cost — <span style={{color:C.warn}}>{(labCost/100).toFixed(2)}%</span> / trade<InfoTip text="What each trade costs you in fees and slippage. It sounds tiny, but a strategy that trades often can be quietly killed by costs. Slide it up and watch profitable strategies turn into losers — this is where most edges die."/></div>
+                    <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Fee — <span style={{color:C.warn}}>{(labCost/100).toFixed(2)}%</span> / side<InfoTip text="Fee per side. The engine also assumes 0.05% slippage per side. These are illustrative settings, not exchange-specific quotes."/></div>
                     <input type="range" min={0} max={50} value={labCost} onChange={e=>setLabCost(+e.target.value)} style={{width:"100%",accentColor:C.warn}}/>
                   </div>
                   <div style={{flex:"1 1 150px"}}>
@@ -1083,7 +979,7 @@ function TradeApp({ initialProfile = "Balanced" }){
                   </label>
                   <InfoTip text="A common pro rule: only take buy signals when price is above its 100-day average, i.e. only trade 'with the tide.' It usually cuts the number of trades. Test whether it actually improves the out-of-sample result or just looks tidier."/>
                   <div style={{flex:"1 1 200px"}}>
-                    <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Train / test split — <span style={{color:C.blue}}>{labSplitPct}% / {100-labSplitPct}%</span><InfoTip text="How the data is divided: the strategy 'learns' on the first part, then is judged on the rest it never saw. Slide this around — if the result swings wildly depending on where you cut, that's a warning the strategy isn't robust."/></div>
+                    <div style={{fontSize:11,color:C.dim,fontFamily:C.mono,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Earlier / later split — <span style={{color:C.blue}}>{labSplitPct}% / {100-labSplitPct}%</span><InfoTip text="Compare two historical windows. No model is trained. If you adjust settings after viewing the later result, it is no longer a fresh test."/></div>
                     <input type="range" min={40} max={80} step={5} value={labSplitPct} onChange={e=>setLabSplitPct(+e.target.value)} style={{width:"100%",accentColor:C.blue}}/>
                   </div>
                 </div>
@@ -1093,6 +989,7 @@ function TradeApp({ initialProfile = "Balanced" }){
               </div>
             </div>
 
+            <p style={{fontSize:12,color:C.dim,lineHeight:1.6}}>{labEntry?.live?`Historical ${labAsset} data · ${labEntry.src}`:"Illustrative sample prices — not market data"}. Assumed fee {(labCfg.costBps/100).toFixed(2)}% + slippage 0.05% per side. Signals fill at the next open where supplied, otherwise next close. Return includes open positions after assumed exit cost; win rate counts closed trades only. Repeatedly tuning the later window uses hindsight.</p>
             {!labData.length?(
               <div style={{textAlign:"center",padding:40,color:C.dim,fontFamily:C.mono,fontSize:13}}>Loading {labAsset} data…</div>
             ):(
@@ -1100,14 +997,14 @@ function TradeApp({ initialProfile = "Balanced" }){
                 {/* results: in-sample vs out-of-sample side by side */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12,marginBottom:16}}>
                   <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:18}}>
-                    <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>In-sample (trained on)<InfoTip text="Results on the older data the strategy was built around. Almost anything can look good here — you're seeing how it did on the very data used to pick the settings."/></div>
+                    <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Earlier window<InfoTip text="Results on the earlier dates. These are historical comparisons with fixed parameters, not a trained AI model."/></div>
                     <LabStat label="Return" value={fmtPct(labTrain?.metrics.totalReturn)} tone={labTrain?.metrics.totalReturn>0?C.accent:C.danger}/>
                     <LabStat label="Win rate" value={fmtPct(labTrain?.metrics.winRate)}/>
                     <LabStat label="Worst dip" value={fmtPct(labTrain?.metrics.maxDD)} tone={C.danger}/>
                     <LabStat label="Trades" value={labTrain?.metrics.nTrades??"—"}/>
                   </div>
                   <div style={{background:C.panel,border:`1.5px solid ${C.accent}`,borderRadius:12,padding:18}}>
-                    <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Out-of-sample (never seen) ★<InfoTip text="Results on newer data the strategy never saw while being built. THIS is the honest test — it's the closest thing to 'how would it have done on the future.' Trust this column far more than the other one."/></div>
+                    <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Later window<InfoTip text="Results on the later dates. Repeatedly tuning while viewing this result uses hindsight; this is not proof of future performance."/></div>
                     <LabStat label="Return" value={fmtPct(labTest?.metrics.totalReturn)} tone={labTest?.metrics.totalReturn>0?C.accent:C.danger}/>
                     <LabStat label="Win rate" value={fmtPct(labTest?.metrics.winRate)}/>
                     <LabStat label="Worst dip" value={fmtPct(labTest?.metrics.maxDD)} tone={C.danger}/>
@@ -1120,20 +1017,21 @@ function TradeApp({ initialProfile = "Balanced" }){
                   <div style={{background:C.panel,border:`1px solid ${labVerdict.tone}`,borderRadius:10,padding:"14px 16px",marginBottom:16}}>
                     <div style={{fontSize:10,fontFamily:C.mono,letterSpacing:1.5,textTransform:"uppercase",color:labVerdict.tone,marginBottom:6}}>What this result is telling you</div>
                     <div style={{fontSize:13.5,color:C.text,lineHeight:1.6}}>{labVerdict.text}</div>
-                    <div style={{fontSize:11.5,color:C.dim,marginTop:8}}>For reference, simply buying and holding {labAsset} over this period returned {fmtPct(labFull?.metrics.buyHold)}.</div>
+                    <div style={{fontSize:11.5,color:C.dim,marginTop:8}}>Buy-and-hold over the SAME later dates, after the same costs: {fmtPct(labTest?.metrics.buyHold)}. {labData[labSplit]&&`${fmtDate(labData[labSplit].t)} – ${fmtDate(labData.at(-1).t)}`}.</div>
                   </div>
                 )}
 
+                <p style={{fontSize:12,color:C.dim}}>Each window restarts in cash. The linked equity curve compounds their ending values for illustration; it is not one continuous strategy.</p>
                 {/* equity curve */}
                 <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"16px 12px 8px"}}>
-                  <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:8,paddingLeft:8}}>Equity curve · train → test</div>
+                  <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:8,paddingLeft:8}}>Linked equity · earlier → later</div>
                   <ResponsiveContainer width="100%" height={220}>
                     <AreaChart data={labEquity}>
                       <defs><linearGradient id="labEq" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.accent} stopOpacity={0.4}/><stop offset="100%" stopColor={C.accent} stopOpacity={0}/></linearGradient></defs>
                       <XAxis dataKey="t" tickFormatter={fmtDate} tick={{fontSize:10,fill:C.dim}} minTickGap={40}/>
                       <YAxis tick={{fontSize:10,fill:C.dim}} width={40} domain={["auto","auto"]}/>
                       <Tooltip contentStyle={{background:C.panel2,border:`1px solid ${C.line}`,borderRadius:8,fontSize:12}} labelFormatter={fmtDate} formatter={(v)=>[fmtNum(v),"equity"]}/>
-                      {labData[labSplit]&&<ReferenceLine x={labData[labSplit].t} stroke={C.blue} strokeDasharray="4 4" label={{value:"test →",fill:C.blue,fontSize:10}}/>}
+                      {labData[labSplit]&&<ReferenceLine x={labData[labSplit].t} stroke={C.blue} strokeDasharray="4 4" label={{value:"later →",fill:C.blue,fontSize:10}}/>}
                       <Area type="monotone" dataKey="equity" stroke={C.accent} strokeWidth={2} fill="url(#labEq)"/>
                     </AreaChart>
                   </ResponsiveContainer>
@@ -1184,7 +1082,7 @@ function TradeApp({ initialProfile = "Balanced" }){
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12}}>
                 {CANDLE_PATTERNS.map((p,i)=>(
                   <div key={i} style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:16,display:"flex",gap:14}}>
-                    <div style={{flexShrink:0}}><Candle {...p.ohlc} w={64} ht={120}/></div>
+                    <div style={{flexShrink:0}}>{p.name==="Bullish engulfing"?<CandlePair/>:<Candle {...p.ohlc} w={64} ht={120}/>}</div>
                     <div style={{fontSize:12.5,lineHeight:1.55}}>
                       <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:4}}>{p.name}</div>
                       <div style={{color:C.dim,marginBottom:6}}>{p.what}</div>
@@ -1203,7 +1101,7 @@ function TradeApp({ initialProfile = "Balanced" }){
                 <div style={{textAlign:"center",padding:"20px 0"}}>
                   <div style={{fontSize:34,fontWeight:800,color:C.accent,fontFamily:C.mono}}>{candleScore}/{CANDLE_QUIZ.length}</div>
                   <div style={{fontSize:14,color:C.text,margin:"8px 0 4px"}}>Nice work. You can read the basic candles.</div>
-                  <div style={{fontSize:12,color:C.dim,maxWidth:420,margin:"0 auto 16px",lineHeight:1.6}}>Remember the honest part: naming a candle is easy — but no candle reliably predicts the next one. Use the Lab to test whether any pattern-based idea actually holds up.</div>
+                  <div style={{fontSize:12,color:C.dim,maxWidth:420,margin:"0 auto 16px",lineHeight:1.6}}>Naming a candle does not establish predictive skill. The Lab tests moving-average rules, not candlestick-pattern entry rules.</div>
                   <button onClick={()=>{setCandleQ(0);setCandleAns(null);setCandleScore(0);}} style={{background:C.panel2,color:C.text,border:`1px solid ${C.line}`,borderRadius:8,padding:"10px 20px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Try again</button>
                 </div>
               ):(
@@ -1251,114 +1149,15 @@ function TradeApp({ initialProfile = "Balanced" }){
             </div>
           </div>
         ):tab==="practice"?(
-          // ── PRACTICE TAB — paper trading with fake money ──
-          (()=>{
-            const px=lastBar?lastBar.close:null;
-            const posValue=paperPos&&px?paperPos.units*px:0;
-            const equity=paperCash+posValue;
-            const openPnl=paperPos&&px?(px-paperPos.entryPrice)*paperPos.units:0;
-            const openPnlPct=paperPos?((px/paperPos.entryPrice-1)*100):0;
-            const buy=()=>{
-              if(!px||paperPos) return;
-              const spend=paperCash; // simple: go all-in with virtual cash (beginner-friendly)
-              const units=spend/px;
-              setPaperPos({entryPrice:px,units,reason:paperReason||"(no reason given)",stop:paperStop?parseFloat(paperStop):null,openedAt:Date.now()});
-              setPaperCash(0); setPaperReason(""); setPaperStop("");
-            };
-            const sell=()=>{
-              if(!px||!paperPos) return;
-              const proceeds=paperPos.units*px;
-              const pnl=proceeds-(paperPos.units*paperPos.entryPrice);
-              const pnlPct=(px/paperPos.entryPrice-1)*100;
-              setPaperLog(l=>[{asset,entry:paperPos.entryPrice,exit:px,pnl,pnlPct,reason:paperPos.reason,followedStop:paperPos.stop!=null,when:Date.now()},...l].slice(0,30));
-              setPaperCash(proceeds); setPaperPos(null);
-            };
-            const reset=()=>{ setPaperCash(10000); setPaperPos(null); setPaperLog([]); };
-            return (
-            <div style={{maxWidth:760,margin:"0 auto"}}>
-              <div style={{marginBottom:16}}>
-                <h2 style={{fontSize:24,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px",color:C.text}}>Practice with fake money</h2>
-                <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:0,maxWidth:620}}>
-                  The safest way to learn: make pretend trades with $10,000 of fake money, using real {asset} prices.
-                  No real money, no risk — just practise the habits that matter, like writing down <em>why</em> you
-                  bought and setting a limit before you do.
-                </p>
-              </div>
-
-              {/* balance */}
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:16}}>
-                <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:16}}>
-                  <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1,fontFamily:C.mono}}>Total (fake)</div>
-                  <div style={{fontSize:24,fontFamily:C.mono,fontWeight:700,color:equity>=10000?C.accent:C.danger}}>${equity.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
-                  <div style={{fontSize:11,color:C.dim}}>started at $10,000</div>
-                </div>
-                <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:16}}>
-                  <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1,fontFamily:C.mono}}>{asset} price now</div>
-                  <div style={{fontSize:24,fontFamily:C.mono,fontWeight:700,color:C.text}}>{px?`$${px.toLocaleString(undefined,{maximumFractionDigits:dp})}`:"—"}</div>
-                  <div style={{fontSize:11,color:C.dim}}>latest daily close</div>
-                </div>
-              </div>
-
-              {/* action */}
-              {!paperPos?(
-                <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:18,marginBottom:16}}>
-                  <div style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:12}}>Make a practice buy</div>
-                  <div style={{fontSize:12,color:C.dim,marginBottom:6}}>Why are you buying? (Writing this down is the real skill.)</div>
-                  <input value={paperReason} onChange={e=>setPaperReason(e.target.value)} placeholder="e.g. the fast average just crossed above the slow one" style={{width:"100%",boxSizing:"border-box",background:C.panel2,border:`1px solid ${C.line}`,color:C.text,borderRadius:8,padding:"11px 13px",fontSize:14,marginBottom:12,fontFamily:C.sans}}/>
-                  <div style={{fontSize:12,color:C.dim,marginBottom:6}}>At what price would you cut your loss? (Your "stop" — optional but wise.)</div>
-                  <input value={paperStop} onChange={e=>setPaperStop(e.target.value.replace(/[^0-9.]/g,""))} placeholder="e.g. a price below where you bought" style={{width:"100%",boxSizing:"border-box",background:C.panel2,border:`1px solid ${C.line}`,color:C.text,borderRadius:8,padding:"11px 13px",fontSize:14,marginBottom:16,fontFamily:C.sans}}/>
-                  <button onClick={buy} disabled={!px} style={{background:C.accent,color:"#08120a",border:"none",borderRadius:8,padding:"13px 26px",fontSize:15,fontWeight:800,cursor:px?"pointer":"default",opacity:px?1:0.5,width:"100%"}}>Buy {asset} with fake money</button>
-                </div>
-              ):(
-                <div style={{background:C.panel,border:`1.5px solid ${openPnl>=0?C.accent:C.danger}`,borderRadius:12,padding:18,marginBottom:16}}>
-                  <div style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:10}}>You're holding {asset}</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:12}}>
-                    <div><div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1}}>Bought at</div><div style={{fontSize:15,fontFamily:C.mono,color:C.text}}>${paperPos.entryPrice.toLocaleString(undefined,{maximumFractionDigits:dp})}</div></div>
-                    <div><div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1}}>Now</div><div style={{fontSize:15,fontFamily:C.mono,color:C.text}}>${px.toLocaleString(undefined,{maximumFractionDigits:dp})}</div></div>
-                    <div><div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:1}}>Profit/loss</div><div style={{fontSize:15,fontFamily:C.mono,fontWeight:700,color:openPnl>=0?C.accent:C.danger}}>{openPnl>=0?"+":""}{openPnlPct.toFixed(1)}%</div></div>
-                  </div>
-                  <div style={{fontSize:12,color:C.dim,marginBottom:6,fontStyle:"italic"}}>Your reason: "{paperPos.reason}"</div>
-                  {paperPos.stop&&<div style={{fontSize:12,color:px<=paperPos.stop?C.danger:C.dim,marginBottom:12}}>Your stop: ${paperPos.stop.toLocaleString()} {px<=paperPos.stop?"— price is at/below your stop. This is where discipline says sell.":""}</div>}
-                  <button onClick={sell} style={{background:openPnl>=0?C.accent:C.danger,color:openPnl>=0?"#08120a":"#fff",border:"none",borderRadius:8,padding:"13px 26px",fontSize:15,fontWeight:800,cursor:"pointer",width:"100%"}}>Sell & close this practice trade</button>
-                </div>
-              )}
-
-              {/* journal */}
-              {paperLog.length>0&&(
-                <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:18,marginBottom:16}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                    <div style={{fontSize:14,fontWeight:700,color:C.text}}>Your practice journal</div>
-                    <button onClick={reset} style={{background:"transparent",border:`1px solid ${C.line}`,color:C.dim,borderRadius:6,padding:"5px 12px",fontSize:11,cursor:"pointer",fontFamily:C.mono}}>Reset</button>
-                  </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                    {paperLog.map((tr,i)=>(
-                      <div key={i} style={{background:C.panel2,borderRadius:8,padding:"10px 13px",fontSize:12.5}}>
-                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                          <span style={{color:C.text,fontWeight:600}}>{tr.asset}</span>
-                          <span style={{fontFamily:C.mono,fontWeight:700,color:tr.pnl>=0?C.accent:C.danger}}>{tr.pnl>=0?"+":""}{tr.pnlPct.toFixed(1)}%</span>
-                        </div>
-                        <div style={{color:C.dim,fontSize:11.5}}>"{tr.reason}"</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{fontSize:11.5,color:C.dim,lineHeight:1.6,marginTop:12,fontStyle:"italic"}}>
-                    Look back at your reasons over time — that's how you spot your own patterns and improve. This is exactly what real traders do in a journal.
-                  </div>
-                </div>
-              )}
-
-              <div style={{fontSize:11,color:C.dim,textAlign:"center",fontFamily:C.mono,lineHeight:1.6,paddingBottom:8}}>
-                Practice only · fake money · real prices · not financial advice. Building good habits here is free — mistakes here cost you nothing.
-              </div>
-            </div>
-            );
-          })()
+          <PaperPractice asset={asset} price={lastBar?.close} source={isLive?entry.src:"sample"} onSelectAsset={setAsset}/>
         ):(
           <div style={{maxWidth:720,margin:"0 auto"}}>
             <div style={{marginBottom:8}}>
               <h2 style={{fontSize:24,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px",color:C.text}}>Learn crypto trading, from zero</h2>
               <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:0}}>A guided course in plain language — no jargon, no hype. Work through it in order, or jump to what you need. {CURRICULUM.length} modules · {LESSONS.length} short lessons.</p>
             </div>
+            <p style={{fontSize:12,color:C.dim}}>{LESSONS.filter(l=>lessonProgress[l.t]).length}/{LESSONS.length} lessons marked read. {lessonStorageOk?"Saved on this browser only; clearing browser data removes progress.":"Storage unavailable; progress lasts for this session only."} Reading completion is not an assessment of trading skill.</p>
+            <PracticeMissions/>
             <div style={{marginTop:20,display:"flex",flexDirection:"column",gap:22}}>
               {(()=>{ let running=0; return CURRICULUM.map((mod,mi)=>(
                 <div key={mi}>
@@ -1377,10 +1176,13 @@ function TradeApp({ initialProfile = "Balanced" }){
                               <span style={{fontFamily:C.mono,fontSize:11,color:C.accent,flexShrink:0}}>{String(idx+1).padStart(2,"0")}</span>
                               <span style={{fontSize:14.5,fontWeight:600}}>{l.t}</span>
                             </div>
-                            <span style={{fontSize:10,fontFamily:C.mono,color:C.dim,flexShrink:0,marginLeft:8}}>{l.m} {open?"▲":"▼"}</span>
+                            <span style={{fontSize:10,fontFamily:C.mono,color:C.dim,flexShrink:0,marginLeft:8}}>Short read {open?"▲":"▼"}</span>
                           </button>
                           {open&&(
-                            <div style={{padding:"0 16px 16px 40px",fontSize:14,color:C.text,lineHeight:1.7,borderTop:`1px solid ${C.line}`,paddingTop:13}}>{l.body}</div>
+                            <div style={{padding:"0 16px 16px 40px",fontSize:14,color:C.text,lineHeight:1.7,borderTop:`1px solid ${C.line}`,paddingTop:13}}>{l.body}
+                              {l.t==="The evidence (sources)"&&<ul><li><a href="https://www.bis.org/publications/bulletin-69-crypto-shocks-and-retail-losses" target="_blank" rel="noopener noreferrer">BIS Bulletin 69 · crypto shocks, February 2023</a></li><li><a href="https://www.esma.europa.eu/press-news/esma-news/esma-agrees-prohibit-binary-options-and-restrict-cfds-protect-retail-investors?trk=article-ssr-frontend-pulse_x-social-details_comments-action_comment-text" target="_blank" rel="noopener noreferrer">ESMA · retail CFD measures, March 2018</a></li><li><a href="https://www.tradingview.com/pine-script-docs/concepts/strategies/" target="_blank" rel="noopener noreferrer">TradingView · strategy simulation and biases</a></li></ul>}
+                              <div style={{marginTop:16}}><label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}><input type="checkbox" checked={!!lessonProgress[l.t]} onChange={e=>setLessonProgress(v=>({...v,[l.t]:e.target.checked}))}/> Mark this lesson read</label></div>
+                            </div>
                           )}
                         </div>
                       );
@@ -1569,7 +1371,7 @@ const TESTIMONIALS = [
   { quote: "For those who want to learn, this app can guide you and make it easier to understand market trends.", name: "Ng Choon Wai", tag: "Telemarketer" },
   { quote: "The learning curve is steep, but once you understand it, it does help me make better investment decisions in AI coins.", name: "Sandeep Kumar", tag: "Halyo user" },
 ];
-const RELEASE_VERSION = "2026-10-13";
+const RELEASE_VERSION = "2026-10-16";
 
 // Use a real link so buying does not require the optional quiz and the
 // Google tag can decorate checkout navigation when cross-domain is configured.
@@ -1608,7 +1410,7 @@ const CANDLE_PATTERNS = [
   { name:"Bullish engulfing", ohlc:{o:40,h:78,l:38,c:74},
     what:"A big up-candle whose body fully covers the previous down-candle's body.",
     means:"Buyers overwhelmed sellers decisively in this period.",
-    honest:"Looks powerful, and traders love it — but 'looks powerful' isn't the same as 'price will keep rising.' Test any pattern before trusting it (that's what the Lab is for)." },
+    honest:"Looks powerful, and traders love it — but 'looks powerful' isn't the same as 'price will keep rising.' This card teaches recognition, not a tested entry rule. The Lab tests moving-average crossovers, not candle-pattern strategies." },
   { name:"Long green (bullish)", ohlc:{o:30,h:82,l:28,c:80},
     what:"A large body with the close far above the open, tiny wicks.",
     means:"Strong, one-sided buying through the whole period.",
@@ -1640,15 +1442,18 @@ const HOW_STEPS=[
   { n:"1", t:"Try the guided demo", d:"Run a simple strategy test without signing up. If live market data is unavailable, Halyo clearly switches to illustrative sample prices." },
   { n:"2", t:"Learn chart basics", d:"Use short, plain-language lessons to understand candles, market behaviour and the limits of common trading ideas." },
   { n:"3", t:"Practise recognising candles", d:"Answer quick pattern questions, read the explanation, and learn why a candle never guarantees what happens next." },
-  { n:"4", t:"Test ideas on past data", d:"Compare training and unseen periods, include trading costs, and look at losses as well as wins before drawing a conclusion." },
+  { n:"4", t:"Test ideas on past data", d:"Compare earlier and later historical periods, include trading costs, and look at losses as well as wins before drawing a conclusion." },
 ];
 const FAQS=[
+  { q:"Why pay when crypto courses are free?", a:"Free courses are useful, and free tools also offer quizzes, charting and backtesting. Halyo brings short lessons and selected practice tools into one focused browser workspace. You are paying for that workflow and convenience. Try the three free guided exercises and demo before deciding." },
+  { q:"Does Halyo use AI to predict prices?", a:"No. AI-related crypto assets are examples for learning. Halyo does not include an AI tutor, prediction engine or automated trading service. Its test explanations use fixed educational rules." },
+  { q:"Is my learning progress saved?", a:"Lesson checkmarks, exercise observations and the practice journal are saved on this browser when local storage is available. They do not sync between devices. Clearing browser data removes them. You can download the practice journal as a JSON file." },
   { q:"What are 'AI coins' and why focus on them?", a:"AI coins are crypto assets connected with artificial-intelligence or computing projects, including Bittensor (TAO), NEAR and Render. They can be highly volatile. Halyo uses them as examples for learning how to inspect claims, read charts and test ideas without treating hype as evidence." },
   { q:"Do I need any experience with crypto or trading?", a:"No. Halyo is built for complete beginners. It starts from the very basics — what crypto even is — and explains everything in simple, everyday language. If you've never traded before, this is made for you." },
   { q:"Are AI coins a good investment?", a:"We honestly can't tell you that, and we won't. AI coins are extremely volatile — they can rise fast and fall just as fast. Halyo doesn't tell you what to buy. It teaches you to evaluate them for yourself and see the real risks, so you make your own informed decision instead of following hype." },
   { q:"Is this financial advice? Will it tell me what to buy?", a:"No, and that's on purpose. Halyo is a learning tool. It never tells you to buy or sell anything. Instead, it teaches you how things work and lets you test ideas yourself, so you can make your own informed decisions. Anyone who promises you what to buy is best avoided." },
-  { q:"Will this make me money?", a:"We won't promise that — because no honest tool can. The truth is most people who trade actively lose money, and AI coins are more volatile than most. Halyo's job is to help you learn, understand the real risks, and avoid common mistakes. It's about becoming smarter and more careful, not getting rich quick." },
-  { q:"What exactly do I get for US$39?", a:"One payment gives you lifetime access to Halyo in a supported web browser. It includes the lesson library, candlestick practice, historical strategy testing and charts. Please confirm the final amount and any tax shown by Lemon Squeezy before paying." },
+  { q:"Will this make me money?", a:"We won't promise that — because no honest tool can. Crypto trading can produce substantial losses. A simulation or course cannot guarantee that you will avoid them. Halyo's job is to help you learn, understand the real risks, and avoid common mistakes. It's about becoming smarter and more careful, not getting rich quick." },
+  { q:"What exactly do I get for US$39?", a:"One payment gives you lifetime access to Halyo in a supported web browser. It includes 39 short lessons across 9 modules, candlestick practice, selected MA/RSI strategy tests and charts, plus a device-local practice journal. Please confirm the final amount and any tax shown by Lemon Squeezy before paying." },
   { q:"Is US$39 a one-time cost or a subscription?", a:"Halyo is a one-time lifetime licence, not a monthly subscription. The checkout shows the final price, currency and any applicable tax." },
   { q:"Can I try it before I buy?", a:"Yes. There's a free demo where you can test a simple AI-coin strategy and see how the tool works — no sign-up, no payment. It's a small taste of the full version." },
   { q:"What if it's not for me?", a:"Try the free demo before buying. Our Terms describe a 14-day refund policy. Please read the Terms and the conditions shown at checkout, and contact us with any purchase or refund questions." },
@@ -1748,7 +1553,7 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
       <span style={{ color: C.warn, fontWeight: 600 }}>Not financial advice.</span>{" "}
       Halyo is an education and analysis tool. Asset matches reflect your stated risk
       preference, not a recommendation to buy. Crypto is volatile and you can lose money.
-      Win rates shown in the app are measured on historical data, after costs — past results
+      Results use historical or clearly labelled sample prices and simplified cost assumptions — past results
       never guarantee future outcomes. You make every decision.
       <div style={{ marginTop: 10 }}>
         <a href="/blog/" style={{ color: C.blue, textDecoration: "none" }}>Blog</a>
@@ -1783,16 +1588,16 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
             Lessons · candlestick practice · historical testing
           </div>
           <h1 className="halyo-hero-title" style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.5, margin: "0 0 18px", maxWidth: 680, marginLeft: "auto", marginRight: "auto", color: C.text }}>
-            Understand crypto charts{" "}
-            <span style={{ color: C.accent }}>before you trade.</span>
+            Turn crypto lessons into{" "}
+            <span style={{ color: C.accent }}>hands-on practice.</span>
           </h1>
           <p style={{ fontSize: 17, color: C.dim, lineHeight: 1.6, maxWidth: 560, margin: "0 auto 14px" }}>
-            Learn the basics in plain language, practise reading candlesticks, and test simple
-            strategies on historical data. Halyo is a browser-based learning tool—not a signal
-            service, exchange or promise of profit.
+            Watched the tutorials, but still unsure how to apply them? Read a candle, change a
+            strategy setting and learn to question the result — with short explanations and
+            practice tools together in one browser app.
           </p>
           <p style={{ fontSize: 14, color: C.accent, lineHeight: 1.6, maxWidth: 520, margin: "0 auto 30px", fontWeight: 600 }}>
-            Try a guided exercise first. No signup or payment details required.
+            Try three guided exercises free. No signup or payment details required.
           </p>
 
           {/* PRIMARY opt-in: the free demo (lowest-commitment) */}
@@ -1802,8 +1607,10 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
               padding: "16px 36px", fontSize: 16, fontWeight: 800, cursor: "pointer",
               fontFamily: C.sans, letterSpacing: 0.2,
             }}>
-              Try the free demo →
+              Try the free practice demo →
             </button>
+            <div style={{marginTop:18}}><CheckoutLink from="hero_value" style={{color:C.text,fontSize:15,fontWeight:700,textDecoration:"underline"}}>Get full lifetime access — {OFFER_PRICE_LABEL} →</CheckoutLink></div>
+            <div style={{fontSize:12,color:C.dim,marginTop:8}}>One payment · no monthly subscription · applicable tax shown at checkout</div>
           </div>
           <div style={{ fontSize: 12, color: C.dim, fontFamily: C.mono, marginTop: 12 }}>
             Historical prices when available · clearly labelled sample fallback · nothing to install
@@ -1861,9 +1668,9 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
         {/* honest value props */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,210px),1fr))", gap: 12, marginTop: 48 }}>
           {[
-            { k: "01", t: "Real costs included", d: "Every result counts the fees you'd actually pay — the part most apps quietly leave out to look good." },
-            { k: "02", t: "Tested on unseen data", d: "We check strategies on prices they've never seen — so the results aren't just cherry-picked hindsight." },
-            { k: "03", t: "We never touch your money", d: "Halyo can't trade or hold your crypto. It's just a safe place to learn and practise." },
+            { k: "01", t: "Connect a lesson to an experiment", d: "Read how a moving average works, then change the same setting yourself. No coding required in Halyo." },
+            { k: "02", t: "Learn to question the numbers", d: "Explore costs, losing periods and earlier/later comparisons. See why a good-looking backtest is not proof." },
+            { k: "03", t: "Keep a record of your learning", d: "Save lesson progress, exercise observations and a fake-money practice journal on your browser. No cloud sync." },
           ].map((f) => (
             <div key={f.k} style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 10, padding: 18 }}>
               <div style={{ fontFamily: C.mono, fontSize: 12, color: C.accent, marginBottom: 10 }}>{f.k}</div>
@@ -1873,16 +1680,27 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
           ))}
         </div>
 
+        <section className="halyo-value-section" aria-labelledby="why-pay-heading">
+          <div className="halyo-kicker">A focused place to apply what you learn</div>
+          <h2 id="why-pay-heading">Why pay when crypto courses are free?</h2>
+          <p>Free courses are useful. Halyo brings selected lessons and hands-on tools into one focused workspace, so you can move from reading a concept to trying it and recording what you noticed.</p>
+          <div className="halyo-value-grid">
+            <div><h3>Try free first</h3><p>Three guided sample exercises and a one-asset moving-average demo. Explore candles, costs and the limits of historical tests.</p><button className="halyo-secondary" onClick={onDemo}>See how the practice works →</button></div>
+            <div><h3>Continue with full access · {OFFER_PRICE_LABEL}</h3><p>39 short lessons across 9 modules, 10 selected crypto examples, adjustable MA/RSI strategy tests, cost and trend controls, charts and a downloadable practice journal.</p><p className="halyo-muted">One-time lifetime web access. Learning records stay on your browser. Data availability varies; sample prices are labelled.</p><CheckoutLink from="why_pay" style={{color:C.accent,fontWeight:700}}>Buy lifetime access →</CheckoutLink></div>
+          </div>
+          <p className="halyo-muted">Choose Halyo for the learning workflow and convenience. Free tools also offer lessons, quizzes and backtesting. Halyo does not promise better trading results or tell you what to buy.</p>
+        </section>
+
         {/* what you get */}
         <div style={{ marginTop: 56 }}>
           <div style={{ textAlign: "center", fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>
-            One payment · yours to keep
+            One payment · lifetime web access
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(230px,1fr))", gap: 12 }}>
             {[
               { icon: "∞", t: "Lifetime web access", d: "One payment, not a recurring subscription. Confirm the final total shown at checkout." },
               { icon: "◇", t: "Licence-key activation", d: "After purchase, return to Halyo and enter your licence key to unlock the learning app in your browser." },
-              { icon: "◇", t: "Learning-first", d: "Built to make you a sharper, more honest trader — not to sell you signals or take a cut of your money." },
+              { icon: "◇", t: "Learning-first", d: "A focused learning workspace for trying concepts and recording observations. No signals, trade execution or promised returns." },
             ].map((f, i) => (
               <div key={i} style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 12, padding: 20 }}>
                 <div style={{ fontSize: 24, color: C.accent, marginBottom: 10, fontFamily: C.mono }}>{f.icon}</div>
@@ -1902,7 +1720,7 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
             {[
               {label:"LEARN",title:"Plain-language lessons",body:"Build vocabulary and understand how common chart ideas are supposed to work."},
               {label:"PRACTISE",title:"Candlestick exercises",body:"Identify patterns and read an honest explanation of what each candle can—and cannot—show."},
-              {label:"TEST",title:"Historical backtesting",body:"Compare a simple rule on training and unseen periods, with costs and losing trades included."},
+              {label:"TEST",title:"Historical backtesting",body:"Change a simple MA/RSI rule, compare earlier and later periods, and inspect costs and losing trades."},
             ].map((item)=>(
               <div key={item.label} style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:20,minHeight:150}}>
                 <div style={{fontSize:10,fontFamily:C.mono,color:C.accent,letterSpacing:1.5,marginBottom:18}}>{item.label}</div>
@@ -2253,13 +2071,7 @@ function LicenseGate({ onUnlock, onBack }){
 // FREE PUBLIC DEMO — reachable at ?demo=1, no login/payment.
 // One asset (TAO), simple MA backtest, honest verdict. Point ads here.
 // ═══════════════════════════════════════════════════════════
-function createDemoSampleData() {
-  // Illustrative prices only: never present this series as TAO market history.
-  return Array.from({ length: 360 }, (_, i) => {
-    const price = n => 100 + n * 0.08 + Math.sin(n / 8) * 9 + Math.sin(n / 23) * 6;
-    return { i, t: i, open: price(Math.max(0, i - 1)), close: price(i) };
-  });
-}
+const createDemoSampleData = createSampleData;
 
 async function fetchDemoJSON(url, signal, timeoutMs = 5000) {
   const controller = new AbortController();
@@ -2368,7 +2180,6 @@ function DemoLab({ onExit }){
   const cfg={fast,slow,rsiFloor:30,rsiCeil:70,costBps:10,slipBps:5,useRsi:false};
   const train=useMemo(()=>data.length?runBacktest(data.slice(0,split),cfg):null,[data,split,fast,slow]);
   const test=useMemo(()=>data.length?runBacktest(data.slice(split),cfg):null,[data,split,fast,slow]);
-  const full=useMemo(()=>data.length?runBacktest(data,cfg):null,[data,fast,slow]);
 
   useEffect(()=>{
     // Completion is one changed control with recomputed results, not a page view.
@@ -2379,16 +2190,11 @@ function DemoLab({ onExit }){
 
   const verdict=useMemo(()=>{
     if(!train||!test) return null;
-    if(isSample) return {tone:C.warn,text:"These results use simulated sample prices. Explore how the moving averages change a test; the numbers do not describe TAO performance or predict real returns."};
-    const tr=train.metrics.totalReturn, te=test.metrics.totalReturn, bh=full?.metrics.buyHold??0;
-    if((test.metrics.nTrades||0)<4) return {tone:C.dim,text:"Very few trades on the unseen data — not enough to judge. Try different averages."};
-    if(tr>0.15 && te<=0) return {tone:C.danger,text:"Classic overfitting: it looked strong on the data it was built around, but lost on data it never saw. Looking good on the past doesn't mean it works ahead — the trap most 'winning' strategies fall into."};
-    if(te>0 && te<bh) return {tone:C.warn,text:"It made money on unseen data — but less than simply buying and holding would have. After all that effort, doing nothing beat it."};
-    if(te>0 && te>=bh) return {tone:C.accent,text:"It held up on unseen data and beat buy-and-hold here. Encouraging — but one asset, one window isn't proof. The full Lab lets you test costs, filters, and other coins to see if it survives."};
-    return {tone:C.warn,text:"Modest or negative on unseen data — the honest norm. Most simple strategies don't beat the market after costs. Seeing that clearly is the whole point."};
-  },[train,test,full,isSample]);
+    if(isSample) return {tone:C.warn,text:"These are illustrative sample prices, not TAO history. "+interpretTest(train,test)};
+    return {tone:C.dim,text:interpretTest(train,test)};
+  },[train,test,isSample]);
 
-  const equity=useMemo(()=>(train&&test)?[...train.equitySeries,...test.equitySeries]:[],[train,test]);
+  const equity=useMemo(()=>(train&&test)?joinedEquity(train,test):[],[train,test]);
 
   const Lock=({children})=>(
     <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontFamily:C.mono,color:C.dim}}>
@@ -2409,9 +2215,11 @@ function DemoLab({ onExit }){
           <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>Try it free · no signup</div>
           <h1 style={{fontSize:30,fontWeight:800,letterSpacing:-1,margin:"0 0 8px",color:C.text,lineHeight:1.15}}>{isSample?"Explore a strategy with sample prices":"Test an AI-coin strategy on real data"}</h1>
           <p style={{fontSize:14.5,color:C.dim,lineHeight:1.6,margin:0,maxWidth:620}}>
-            {isSample?"This practice dataset is generated for illustration. Adjust the moving averages and compare the training and test windows. These are not real cryptocurrency prices.":"Build a simple moving-average strategy and explore Bittensor (TAO) history, split into a training window and a separate test window. This is a taste of the full Strategy Lab."}
+            {isSample?"This practice dataset is generated for illustration. Adjust the moving averages and compare the earlier and later windows. These are not real cryptocurrency prices.":"Build a simple moving-average strategy and explore Bittensor (TAO) history, split into earlier and later windows. This is a taste of the full Strategy Lab."}
           </p>
         </div>
+
+        <PracticeMissions/>
 
         {/* one piece of coin info (the full guide to all coins is inside the app) */}
         {!isSample&&<div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"16px 18px",marginBottom:20}}>
@@ -2455,13 +2263,13 @@ function DemoLab({ onExit }){
             {/* results */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12,marginBottom:16}}>
               <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:18}}>
-                <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>{isSample?"Simulated training window":"In-sample (trained on)"}</div>
+                <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>{isSample?"Earlier sample window":"Earlier window"}</div>
                 {[["Return",fmtPct(train?.metrics.totalReturn),train?.metrics.totalReturn>0?C.accent:C.danger],["Win rate",fmtPct(train?.metrics.winRate),null],["Worst dip",fmtPct(train?.metrics.maxDD),C.danger],["Trades",train?.metrics.nTrades??"—",null]].map(([l,v,t],i)=>(
                   <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${C.line}`}}><span style={{fontSize:12,color:C.dim}}>{l}</span><span style={{fontSize:16,fontFamily:C.mono,fontWeight:600,color:t||C.text}}>{v}</span></div>
                 ))}
               </div>
               <div style={{background:C.panel,border:`1.5px solid ${C.accent}`,borderRadius:12,padding:18}}>
-                <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>{isSample?"Simulated test window":"Out-of-sample (never seen) ★"}</div>
+                <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>{isSample?"Later sample window":"Later window"}</div>
                 {[["Return",fmtPct(test?.metrics.totalReturn),test?.metrics.totalReturn>0?C.accent:C.danger],["Win rate",fmtPct(test?.metrics.winRate),null],["Worst dip",fmtPct(test?.metrics.maxDD),C.danger],["Trades",test?.metrics.nTrades??"—",null]].map(([l,v,t],i)=>(
                   <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${C.line}`}}><span style={{fontSize:12,color:C.dim}}>{l}</span><span style={{fontSize:16,fontFamily:C.mono,fontWeight:600,color:t||C.text}}>{v}</span></div>
                 ))}
@@ -2472,20 +2280,21 @@ function DemoLab({ onExit }){
               <div style={{background:C.panel,border:`1px solid ${verdict.tone}`,borderRadius:10,padding:"14px 16px",marginBottom:16}}>
                 <div style={{fontSize:10,fontFamily:C.mono,letterSpacing:1.5,textTransform:"uppercase",color:verdict.tone,marginBottom:6}}>What this result is telling you</div>
                 <div style={{fontSize:13.5,color:C.text,lineHeight:1.6}}>{verdict.text}</div>
-                <div style={{fontSize:11.5,color:C.dim,marginTop:8}}>{isSample?"Holding the simulated sample series would show":"For reference, simply holding TAO over this period returned"} {fmtPct(full?.metrics.buyHold)}.</div>
+                <div style={{fontSize:11.5,color:C.dim,marginTop:8}}>{isSample?"Buy-and-hold over the SAME later sample days, after the same costs:":"Buy-and-hold over the SAME later dates, after the same costs:"} {fmtPct(test?.metrics.buyHold)}. {data[split]&&`${demoDate(data[split].t)} – ${demoDate(data.at(-1).t)}`}.</div>
               </div>
             )}
 
+            <p style={{fontSize:12,color:C.dim,lineHeight:1.6}}>Fee 0.10% + slippage 0.05% per side. Signals fill at the next open where supplied, otherwise next close. Return includes an open position after assumed exit cost; win rate counts closed trades. Windows restart in cash; the linked curve is an illustration, not one continuous strategy. Repeatedly tuning the later window uses hindsight.</p>
             {/* equity chart */}
             <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"16px 12px 8px",marginBottom:24}}>
-              <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:8,paddingLeft:8}}>{isSample?"Simulated equity curve · train → test":"Equity curve · train → test"}</div>
+              <div style={{fontSize:11,fontFamily:C.mono,color:C.dim,letterSpacing:1,textTransform:"uppercase",marginBottom:8,paddingLeft:8}}>{isSample?"Simulated linked equity · earlier → later":"Linked equity · earlier → later"}</div>
               <ResponsiveContainer width="100%" height={200}>
                 <AreaChart data={equity}>
                   <defs><linearGradient id="demoEq" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.accent} stopOpacity={0.4}/><stop offset="100%" stopColor={C.accent} stopOpacity={0}/></linearGradient></defs>
                   <XAxis dataKey="t" tickFormatter={demoDate} tick={{fontSize:10,fill:C.dim}} minTickGap={40}/>
                   <YAxis tick={{fontSize:10,fill:C.dim}} width={40} domain={["auto","auto"]}/>
                   <Tooltip contentStyle={{background:C.panel2,border:`1px solid ${C.line}`,borderRadius:8,fontSize:12}} labelFormatter={demoDate} formatter={(v)=>[fmtNum(v),"equity"]}/>
-                  {data[split]&&<ReferenceLine x={data[split].t} stroke={C.blue} strokeDasharray="4 4" label={{value:"test →",fill:C.blue,fontSize:10}}/>}
+                  {data[split]&&<ReferenceLine x={data[split].t} stroke={C.blue} strokeDasharray="4 4" label={{value:"later →",fill:C.blue,fontSize:10}}/>}
                   <Area type="monotone" dataKey="equity" stroke={C.accent} strokeWidth={2} fill="url(#demoEq)"/>
                 </AreaChart>
               </ResponsiveContainer>
@@ -2493,9 +2302,9 @@ function DemoLab({ onExit }){
 
             {/* upgrade CTA — the natural gap */}
             <div style={{background:`linear-gradient(180deg, ${C.panel}, ${C.panel2})`,border:`1px solid ${C.accent}`,borderRadius:14,padding:"24px 22px",textAlign:"center"}}>
-              <div style={{fontSize:19,fontWeight:800,color:C.text,marginBottom:6}}>Liked that? This is 5% of Halyo.</div>
+              <div style={{fontSize:19,fontWeight:800,color:C.text,marginBottom:6}}>Liked that? Keep learning in the full workspace.</div>
               <div style={{fontSize:13.5,color:C.dim,lineHeight:1.6,maxWidth:560,margin:"0 auto 16px"}}>
-                The full tool unlocks everything the demo holds back — so you can really learn, not just peek.
+                Continue with 39 short lessons, more selected assets, RSI and cost controls, and a device-local practice journal.
               </div>
               <div style={{display:"flex",flexWrap:"wrap",gap:10,justifyContent:"center",marginBottom:20}}>
                 <Lock>All 10 AI coins (TAO, NEAR, RENDER…)</Lock>
