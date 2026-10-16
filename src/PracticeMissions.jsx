@@ -8,7 +8,7 @@ const configuration = fast => ({ fast, slow: 30, costBps: 10, slipBps: 5, useRsi
 const valid = value => value && Array.isArray(value.done) && value.done.length === 3 && value.done.every(v => typeof v === "boolean") && Array.isArray(value.notes) && value.notes.length === 3 && value.notes.every(v => typeof v === "string" && v.length <= 500);
 
 export function CandlePair() {
-  return <svg viewBox="0 0 200 140" width="200" height="140" role="img" aria-label="Two-candle bullish engulfing example: a smaller red body from 65 to 45 followed by a green body from 35 to 80. It describes past prices, not the next move." style={{maxWidth:"100%"}}>
+  return <svg viewBox="0 0 200 140" width="200" height="140" role="img" aria-label="Two-candle bullish engulfing example: a larger green body covers the previous red body. It describes past prices, not the next move." style={{maxWidth:"100%"}}>
     <line x1="55" x2="55" y1="32" y2="108" stroke="#ef4444" strokeWidth="3"/>
     <rect x="37" y="55" width="36" height="30" fill="#ef4444" rx="2"/>
     <line x1="137" x2="137" y1="15" y2="118" stroke="#4ade80" strokeWidth="3"/>
@@ -22,7 +22,7 @@ export default function PracticeMissions() {
   const [active, setActive] = useState(0);
   const [saved, setSaved, storageOk] = useLearningStore("halyo_missions_v1", { done: [false, false, false], notes: ["", "", ""] }, valid);
   const [answer, setAnswer] = useState(null);
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState(() => saved.notes[0]);
   const [notice, setNotice] = useState("");
   const [fast, setFast] = useState(10);
   const [revealed, setRevealed] = useState(null);

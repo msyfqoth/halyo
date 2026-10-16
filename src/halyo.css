@@ -43,3 +43,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .halyo-journal-entry { border:1px solid #263548; padding:14px; border-radius:8px; margin:12px 0; }
 .halyo-journal-entry p { white-space:pre-wrap; }
 @media(max-width:600px) { .halyo-missions,.halyo-value-section { padding:18px 14px; } .halyo-mission-body { padding:16px 12px; } .halyo-mission-tabs button { flex:1 1 130px; } }
+@media(max-width:600px) {
+  .halyo-brand-divider { margin-bottom:12px !important; }
+  .halyo-landing-nav { gap:8px !important; padding-bottom:10px !important; }
+  .halyo-landing-nav .halyo-checkout { display:none !important; }
+}

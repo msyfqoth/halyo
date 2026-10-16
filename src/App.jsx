@@ -542,7 +542,7 @@ export function TradeApp({ initialProfile = "Balanced", initialTab = "trade" }){
       <div style={{maxWidth:1100,margin:"0 auto",padding:"16px 14px"}}>
         {/* honesty strip */}
         <div style={{background:"rgba(245,158,11,0.06)",border:`1px solid rgba(245,158,11,0.22)`,borderRadius:8,padding:"8px 14px",marginBottom:18,fontSize:11.5,color:"#e8c67a",lineHeight:1.5}}>
-          <strong style={{color:C.warn}}>Live signals & education — not advice or prediction.</strong> Signals come from strategy rules on live data and can be wrong. Win rates are historical, after costs. Crypto is volatile; you can lose money. Every decision is yours.
+          <strong style={{color:C.warn}}>Rule status & education — not advice or prediction.</strong> Descriptive readings come from strategy rules and can be wrong. Win rates are historical, after costs. Crypto is volatile; you can lose money. Every decision is yours.
         </div>
 
         {tab==="trade"?(
@@ -1172,9 +1172,9 @@ export function TradeApp({ initialProfile = "Balanced", initialTab = "trade" }){
                       return (
                         <div key={idx} style={{background:C.panel,border:`1px solid ${open?C.accent:C.line}`,borderRadius:10,overflow:"hidden"}}>
                           <button onClick={()=>setOpenLesson(open?null:idx)} style={{width:"100%",background:"transparent",border:"none",padding:"13px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",color:C.text}}>
-                            <div style={{display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:12,textAlign:"left",minWidth:0,flex:1}}>
                               <span style={{fontFamily:C.mono,fontSize:11,color:C.accent,flexShrink:0}}>{String(idx+1).padStart(2,"0")}</span>
-                              <span style={{fontSize:14.5,fontWeight:600}}>{l.t}</span>
+                              <span style={{fontSize:14.5,fontWeight:600,minWidth:0,overflowWrap:"anywhere"}}>{l.t}</span>
                             </div>
                             <span style={{fontSize:10,fontFamily:C.mono,color:C.dim,flexShrink:0,marginLeft:8}}>Short read {open?"▲":"▼"}</span>
                           </button>
@@ -1518,10 +1518,10 @@ const Shell = ({ children }) => (
           Hal<span style={{ color: C.accent }}>yo</span>
         </span>
         <span style={{ fontSize: 10, color: C.dim, fontFamily: C.mono, letterSpacing: 0.5 }}>
-          backtest · analyze · decide
+          learn · practise · reflect
         </span>
       </div>
-      <div style={{ height: 1, background: C.line, marginBottom: 28 }} />
+      <div className="halyo-brand-divider" style={{ height: 1, background: C.line, marginBottom: 28 }} />
       {children}
     </div>
   </div>
@@ -1575,7 +1575,7 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
     return (
       <Shell>
         {/* top navigation (landing page) */}
-        <div style={{ display:"flex", justifyContent:"center", flexWrap:"wrap", gap:22, alignItems:"center", paddingBottom:18, marginBottom:4, borderBottom:`1px solid ${C.line}` }}>
+        <div className="halyo-landing-nav" style={{ display:"flex", justifyContent:"center", flexWrap:"wrap", gap:22, alignItems:"center", paddingBottom:18, marginBottom:4, borderBottom:`1px solid ${C.line}` }}>
           <button onClick={onDemo} style={navBtn}>Free demo</button>
           <button onClick={()=>{ const el=document.getElementById("faq"); if(el) el.scrollIntoView({behavior:"smooth"}); }} style={navBtn}>FAQ</button>
           <a href="/blog/" style={navBtn}>Blog</a>
@@ -1592,9 +1592,8 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
             <span style={{ color: C.accent }}>hands-on practice.</span>
           </h1>
           <p style={{ fontSize: 17, color: C.dim, lineHeight: 1.6, maxWidth: 560, margin: "0 auto 14px" }}>
-            Watched the tutorials, but still unsure how to apply them? Read a candle, change a
-            strategy setting and learn to question the result — with short explanations and
-            practice tools together in one browser app.
+            Watched the tutorials? Practise candles, change strategy settings and question historical
+            results — with short explanations and hands-on tools together in one browser app.
           </p>
           <p style={{ fontSize: 14, color: C.accent, lineHeight: 1.6, maxWidth: 520, margin: "0 auto 30px", fontWeight: 600 }}>
             Try three guided exercises free. No signup or payment details required.
@@ -1645,7 +1644,7 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
           </div>
           {/* Product evidence complements customer feedback. */}
           <div style={{ display:"flex", justifyContent:"center", flexWrap:"wrap", gap:8, marginTop:30 }}>
-            {["See the product before buying", "No wallet connection", "No trading signals"].map((item) => (
+            {["See the product before buying", "No wallet connection", "No automated trading"].map((item) => (
               <span key={item} style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:999,padding:"8px 12px",fontSize:11,color:C.dim,fontFamily:C.mono}}>{item}</span>
             ))}
           </div>
