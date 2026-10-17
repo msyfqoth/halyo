@@ -120,3 +120,5 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .halyo-price-action { padding-top:22px; border-top:1px solid #355548; }
   .halyo-simple-faq { margin-top:34px; }
 }
+.halyo-simple-hero h1,.halyo-preview-body h2,.halyo-trust h2,.halyo-simple-price h2,.halyo-simple-faq>h2 { color:#e2e8f0; }
+.halyo-simple-hero h1 span { display:inline-block; white-space:nowrap; }
