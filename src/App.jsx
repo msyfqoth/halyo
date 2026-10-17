@@ -1438,74 +1438,28 @@ const CANDLE_QUIZ = [
 ];
 
 // ── How it works + FAQ (plain language, for the landing page) ──
-const HOW_STEPS=[
-  { n:"1", t:"Try the guided demo", d:"Run a simple strategy test without signing up. If live market data is unavailable, Halyo clearly switches to illustrative sample prices." },
-  { n:"2", t:"Learn chart basics", d:"Use short, plain-language lessons to understand candles, market behaviour and the limits of common trading ideas." },
-  { n:"3", t:"Practise recognising candles", d:"Answer quick pattern questions, read the explanation, and learn why a candle never guarantees what happens next." },
-  { n:"4", t:"Test ideas on past data", d:"Compare earlier and later historical periods, include trading costs, and look at losses as well as wins before drawing a conclusion." },
-];
 const FAQS=[
-  { q:"Why pay when crypto courses are free?", a:"Free courses are useful, and free tools also offer quizzes, charting and backtesting. Halyo brings short lessons and selected practice tools into one focused browser workspace. You are paying for that workflow and convenience. Try the three free guided exercises and demo before deciding." },
-  { q:"Does Halyo use AI to predict prices?", a:"No. AI-related crypto assets are examples for learning. Halyo does not include an AI tutor, prediction engine or automated trading service. Its test explanations use fixed educational rules." },
-  { q:"Is my learning progress saved?", a:"Lesson checkmarks, exercise observations and the practice journal are saved on this browser when local storage is available. They do not sync between devices. Clearing browser data removes them. You can download the practice journal as a JSON file." },
-  { q:"What are 'AI coins' and why focus on them?", a:"AI coins are crypto assets connected with artificial-intelligence or computing projects, including Bittensor (TAO), NEAR and Render. They can be highly volatile. Halyo uses them as examples for learning how to inspect claims, read charts and test ideas without treating hype as evidence." },
-  { q:"Do I need any experience with crypto or trading?", a:"No. Halyo is built for complete beginners. It starts from the very basics — what crypto even is — and explains everything in simple, everyday language. If you've never traded before, this is made for you." },
-  { q:"Are AI coins a good investment?", a:"We honestly can't tell you that, and we won't. AI coins are extremely volatile — they can rise fast and fall just as fast. Halyo doesn't tell you what to buy. It teaches you to evaluate them for yourself and see the real risks, so you make your own informed decision instead of following hype." },
-  { q:"Is this financial advice? Will it tell me what to buy?", a:"No, and that's on purpose. Halyo is a learning tool. It never tells you to buy or sell anything. Instead, it teaches you how things work and lets you test ideas yourself, so you can make your own informed decisions. Anyone who promises you what to buy is best avoided." },
-  { q:"Will this make me money?", a:"We won't promise that — because no honest tool can. Crypto trading can produce substantial losses. A simulation or course cannot guarantee that you will avoid them. Halyo's job is to help you learn, understand the real risks, and avoid common mistakes. It's about becoming smarter and more careful, not getting rich quick." },
-  { q:"What exactly do I get for US$39?", a:"One payment gives you lifetime access to Halyo in a supported web browser. It includes 39 short lessons across 9 modules, candlestick practice, selected MA/RSI strategy tests and charts, plus a device-local practice journal. Please confirm the final amount and any tax shown by Lemon Squeezy before paying." },
-  { q:"Is US$39 a one-time cost or a subscription?", a:"Halyo is a one-time lifetime licence, not a monthly subscription. The checkout shows the final price, currency and any applicable tax." },
-  { q:"Can I try it before I buy?", a:"Yes. There's a free demo where you can test a simple AI-coin strategy and see how the tool works — no sign-up, no payment. It's a small taste of the full version." },
-  { q:"What if it's not for me?", a:"Try the free demo before buying. Our Terms describe a 14-day refund policy. Please read the Terms and the conditions shown at checkout, and contact us with any purchase or refund questions." },
-  { q:"Is my money safe? Does Halyo touch my crypto?", a:"Halyo never touches your money or your crypto. It doesn't connect to any exchange or wallet, and it can't place trades. It's purely a place to learn and test — completely separate from where you'd actually buy anything." },
-  { q:"Do I need to install anything?", a:"No native app download is required. Halyo runs in a supported web browser on your phone or computer. Browser support and home-screen shortcut availability depend on your device." },
+  {q:"What can I try for free?",a:"Three guided sample exercises on candles, costs and historical tests, plus a one-asset moving-average demo. No signup or payment details needed. Sample prices are clearly labelled."},
+  {q:"Do I need experience or an app download?",a:"Start with the beginner lessons. Halyo runs in a supported phone or computer browser; no native app download or coding is needed."},
+  {q:"Why pay if free courses and tools exist?",a:"Free tools also offer lessons, quizzes and backtesting. Halyo’s value is the convenience of having selected lessons and practice together. Try the demo and decide whether that workflow is useful to you."},
+  {q:"How do I get access after buying?",a:"Checkout is handled by Lemon Squeezy. Return to Halyo and enter the licence key provided after purchase. Use Sign in on later visits. For a missing key or activation help, contact support@halyoapp.com."},
+  {q:"Does my progress sync between devices?",a:"No. Lesson progress, exercise notes and the practice journal stay in this browser when local storage is available. Clearing browser data removes them. Download your journal as JSON to keep a copy."},
+  {q:"Are the prices real, and does Halyo predict trades?",a:"Historical market prices are used when available; fallback data and guided exercises use clearly labelled sample prices. Tests use simplified costs. Halyo does not predict prices, execute trades or tell you what to buy. AI-related coins are learning examples, not an AI prediction feature. Past results cannot guarantee future returns, and crypto can lose value."},
+  {q:"Is this a subscription? What about refunds?",a:"US$39 is a one-time lifetime web licence, with applicable tax shown at checkout. Our Terms describe a 14-day refund policy; read the conditions before buying. Contact us with purchase or refund questions."},
 ];
 let _faqOpen = null; // survives remounts
 const HalyoFaq = React.memo(function HalyoFaq(){
   const [open,setOpenState]=useState(_faqOpen);
-  const setOpen=(v)=>{ _faqOpen=v; setOpenState(v); };
-  return (
-    <div id="faq" style={{maxWidth:680,margin:"64px auto 0",scrollMarginTop:20}}>
-      {/* how it works */}
-      <div style={{textAlign:"center",marginBottom:8}}>
-        <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>How Halyo works</div>
-        <h2 style={{fontSize:26,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px",color:C.text}}>Four simple steps</h2>
-        <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:"0 auto",maxWidth:520}}>No jargon, no pressure. Just a clear path from knowing nothing to understanding what you're doing.</p>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12,margin:"24px 0 48px"}}>
-        {HOW_STEPS.map((s)=>(
-          <div key={s.n} style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"18px 18px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-              <span style={{width:28,height:28,borderRadius:"50%",background:C.accent,color:"#08120a",fontWeight:800,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{s.n}</span>
-              <span style={{fontSize:15,fontWeight:700,color:C.text}}>{s.t}</span>
-            </div>
-            <p style={{fontSize:13,color:C.dim,lineHeight:1.6,margin:0}}>{s.d}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* FAQ */}
-      <div style={{textAlign:"center",marginBottom:8}}>
-        <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>Common questions</div>
-        <h2 style={{fontSize:26,fontWeight:800,letterSpacing:-0.5,margin:"0 0 6px",color:C.text}}>Honest answers</h2>
-        <p style={{fontSize:14,color:C.dim,lineHeight:1.6,margin:"0 auto 4px",maxWidth:520}}>Tap any question to see the answer.</p>
-      </div>
-      <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:20}}>
-        {FAQS.map((f,i)=>(
-          <div key={i} style={{background:C.panel,border:`1px solid ${open===i?C.accent:C.line}`,borderRadius:10,overflow:"hidden"}}>
-            <button onClick={()=>setOpen(open===i?null:i)} style={{width:"100%",background:"transparent",border:"none",padding:"15px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,cursor:"pointer",color:C.text,textAlign:"left"}}>
-              <span style={{fontSize:14.5,fontWeight:600}}>{f.q}</span>
-              <span style={{fontSize:16,color:C.accent,flexShrink:0}}>{open===i?"–":"+"}</span>
-            </button>
-            {open===i&&(
-              <div style={{padding:"0 18px 18px",fontSize:14,color:C.text,lineHeight:1.7,borderTop:`1px solid ${C.line}`,paddingTop:14}}>{f.a}</div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  const setOpen=(v)=>{_faqOpen=v;setOpenState(v);};
+  return <section id="faq" className="halyo-simple-faq" aria-labelledby="faq-heading">
+    <h2 id="faq-heading">A few things to know</h2>
+    {FAQS.map((item,i)=><div key={item.q} className="halyo-faq-item">
+      <h3><button onClick={()=>setOpen(open===i?null:i)} aria-expanded={open===i} aria-controls={`halyo-faq-${i}`}><span>{item.q}</span><span aria-hidden="true">{open===i?"−":"+"}</span></button></h3>
+      {open===i&&<p id={`halyo-faq-${i}`}>{item.a}</p>}
+    </div>)}
+  </section>;
 });
+
 
 // Funnel page shell — module-level so it stays stable across re-renders
 // (defining it inside Funnel would remount the whole tree every render,
@@ -1571,227 +1525,70 @@ function Funnel({ onComplete, onAlreadyBought, onDemo }) {
 
   // ── HERO ──
   if (stage === "hero") {
-    const navBtn = { background:"none", border:"none", color:C.dim, cursor:"pointer", fontSize:13, fontFamily:C.sans, padding:"6px 2px", textDecoration:"none" };
+    const feedbackCard = (item) => (
+      <figure key={item.name} className="halyo-feedback-card">
+        <blockquote>“{item.quote}”</blockquote>
+        <figcaption>{item.name}<span>{item.tag}</span></figcaption>
+      </figure>
+    );
     return (
       <Shell>
-        {/* top navigation (landing page) */}
-        <div className="halyo-landing-nav" style={{ display:"flex", justifyContent:"center", flexWrap:"wrap", gap:22, alignItems:"center", paddingBottom:18, marginBottom:4, borderBottom:`1px solid ${C.line}` }}>
-          <button onClick={onDemo} style={navBtn}>Free demo</button>
-          <button onClick={()=>{ const el=document.getElementById("faq"); if(el) el.scrollIntoView({behavior:"smooth"}); }} style={navBtn}>FAQ</button>
-          <a href="/blog/" style={navBtn}>Blog</a>
-          <a href="/contact.html" style={navBtn}>Contact</a>
-          <button onClick={onAlreadyBought} style={navBtn}>Sign in</button>
-          <CheckoutLink from="nav" style={{ background:C.accent, color:"#08120a", border:"none", borderRadius:7, padding:"8px 16px", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:C.sans }}>Buy lifetime access — {OFFER_PRICE_LABEL}</CheckoutLink>
-        </div>
-        <div style={{ textAlign: "center", padding: "20px 0 8px" }}>
-          <div style={{ fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>
-            Lessons · candlestick practice · historical testing
-          </div>
-          <h1 className="halyo-hero-title" style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.5, margin: "0 0 18px", maxWidth: 680, marginLeft: "auto", marginRight: "auto", color: C.text }}>
-            Turn crypto lessons into{" "}
-            <span style={{ color: C.accent }}>hands-on practice.</span>
-          </h1>
-          <p style={{ fontSize: 17, color: C.dim, lineHeight: 1.6, maxWidth: 560, margin: "0 auto 14px" }}>
-            Watched the tutorials? Practise candles, change strategy settings and question historical
-            results — with short explanations and hands-on tools together in one browser app.
-          </p>
-          <p style={{ fontSize: 14, color: C.accent, lineHeight: 1.6, maxWidth: 520, margin: "0 auto 30px", fontWeight: 600 }}>
-            Try three guided exercises free. No signup or payment details required.
-          </p>
+        <nav className="halyo-landing-nav halyo-simple-nav" aria-label="Main navigation">
+          <button onClick={onDemo}>Free demo</button>
+          <a href="#pricing">Full access</a>
+          <button onClick={onAlreadyBought}>Sign in</button>
+        </nav>
 
-          {/* PRIMARY opt-in: the free demo (lowest-commitment) */}
-          <div style={{ position:"relative", zIndex:2 }}>
-            <button onClick={onDemo} style={{
-              background: C.accent, color: "#08120a", border: "none", borderRadius: 8,
-              padding: "16px 36px", fontSize: 16, fontWeight: 800, cursor: "pointer",
-              fontFamily: C.sans, letterSpacing: 0.2,
-            }}>
-              Try the free practice demo →
-            </button>
-            <div style={{marginTop:18}}><CheckoutLink from="hero_value" style={{color:C.text,fontSize:15,fontWeight:700,textDecoration:"underline"}}>Get full lifetime access — {OFFER_PRICE_LABEL} →</CheckoutLink></div>
-            <div style={{fontSize:12,color:C.dim,marginTop:8}}>One payment · no monthly subscription · applicable tax shown at checkout</div>
-          </div>
-          <div style={{ fontSize: 12, color: C.dim, fontFamily: C.mono, marginTop: 12 }}>
-            Historical prices when available · clearly labelled sample fallback · nothing to install
-          </div>
+        <section className="halyo-simple-hero" aria-labelledby="landing-heading">
+          <h1 id="landing-heading" className="halyo-hero-title">Turn crypto lessons into <span>hands-on practice.</span></h1>
+          <p>Practise reading candles and testing simple strategies in one browser app.</p>
+          <button className="halyo-action" onClick={onDemo}>Try the free demo →</button>
+          <small>Three guided exercises. No signup needed.</small>
+          <CheckoutLink from="hero_value" style={{color:C.text,fontSize:14,fontWeight:600}}>Full access · {OFFER_PRICE_LABEL} lifetime →</CheckoutLink>
+        </section>
 
-          {/* SECONDARY: the guided quiz */}
-          <div style={{ marginTop: 22 }}>
-            <button onClick={() => { track("StartQuiz"); setStage("quiz"); }} style={{
-              background: "transparent", color: C.text, border: `1px solid ${C.line}`, borderRadius: 8,
-              padding: "12px 26px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: C.sans,
-            }}>
-              Optional: take the 2-minute "where do I start?" quiz →
-            </button>
+        <section className="halyo-product-preview" aria-labelledby="preview-heading">
+          <div className="halyo-preview-top"><span>Inside the free demo</span><span>Exercise 1 of 3</span></div>
+          <div className="halyo-preview-body">
+            <CandlePair />
+            <div><h2 id="preview-heading">Read the candle</h2><p>What can these two candles tell you?</p><button className="halyo-secondary" onClick={onDemo}>Try this exercise →</button></div>
           </div>
-          <div style={{ fontSize: 12, color: C.dim, marginTop: 18 }}>
-            Already bought Halyo?{" "}
-            <button onClick={onAlreadyBought} style={{
-              background: "none", border: "none", color: C.blue, cursor: "pointer",
-              fontSize: 12, textDecoration: "underline", padding: 0, fontFamily: C.sans,
-            }}>Enter your key →</button>
-          </div>
+          <p className="halyo-preview-caption">Actual exercise illustration. Sample candles, not a price prediction.</p>
+        </section>
 
-
-          {/* Owner-confirmed offline learner evidence. */}
-          <div style={{marginTop:26,textAlign:"center"}}>
-            <div style={{fontSize:17,fontWeight:700,color:C.text,fontFamily:C.mono}}>
-              {LEARNER_COUNT.toLocaleString("en-US")} learners
-            </div>
-            <div style={{fontSize:12,color:C.dim,lineHeight:1.6,marginTop:5}}>
-              Reached through our marketing activities
-            </div>
-          </div>
-          {/* Product evidence complements customer feedback. */}
-          <div style={{ display:"flex", justifyContent:"center", flexWrap:"wrap", gap:8, marginTop:30 }}>
-            {["See the product before buying", "No wallet connection", "No automated trading"].map((item) => (
-              <span key={item} style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:999,padding:"8px 12px",fontSize:11,color:C.dim,fontFamily:C.mono}}>{item}</span>
-            ))}
-          </div>
-
-          {/* direct buy CTA — for people already convinced */}
-          <div style={{ marginTop: 34, position:"relative", zIndex:2 }}>
-            <CheckoutLink from="buy_cta" style={{
-              background: C.accent, color: "#08120a", border: "none", borderRadius: 10,
-              padding: "16px 40px", fontSize: 17, fontWeight: 800, cursor: "pointer",
-              fontFamily: C.sans, letterSpacing: 0.2, boxShadow: `0 6px 24px rgba(74,222,128,0.18)`,
-            }}>
-              Buy lifetime access — {OFFER_PRICE_LABEL} →
-            </CheckoutLink>
-            <div style={{ fontSize: 12, color: C.dim, fontFamily: C.mono, marginTop: 12 }}>
-              Browser access on phone or computer · secure checkout · no quiz required
-            </div>
-          </div>
-        </div>
-
-        {/* honest value props */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,210px),1fr))", gap: 12, marginTop: 48 }}>
+        <section className="halyo-benefits" aria-label="What you can do with Halyo">
           {[
-            { k: "01", t: "Connect a lesson to an experiment", d: "Read how a moving average works, then change the same setting yourself. No coding required in Halyo." },
-            { k: "02", t: "Learn to question the numbers", d: "Explore costs, losing periods and earlier/later comparisons. See why a good-looking backtest is not proof." },
-            { k: "03", t: "Keep a record of your learning", d: "Save lesson progress, exercise observations and a fake-money practice journal on your browser. No cloud sync." },
-          ].map((f) => (
-            <div key={f.k} style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 10, padding: 18 }}>
-              <div style={{ fontFamily: C.mono, fontSize: 12, color: C.accent, marginBottom: 10 }}>{f.k}</div>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{f.t}</div>
-              <div style={{ fontSize: 12, color: C.dim, lineHeight: 1.55 }}>{f.d}</div>
-            </div>
-          ))}
-        </div>
-
-        <section className="halyo-value-section" aria-labelledby="why-pay-heading">
-          <div className="halyo-kicker">A focused place to apply what you learn</div>
-          <h2 id="why-pay-heading">Why pay when crypto courses are free?</h2>
-          <p>Free courses are useful. Halyo brings selected lessons and hands-on tools into one focused workspace, so you can move from reading a concept to trying it and recording what you noticed.</p>
-          <div className="halyo-value-grid">
-            <div><h3>Try free first</h3><p>Three guided sample exercises and a one-asset moving-average demo. Explore candles, costs and the limits of historical tests.</p><button className="halyo-secondary" onClick={onDemo}>See how the practice works →</button></div>
-            <div><h3>Continue with full access · {OFFER_PRICE_LABEL}</h3><p>39 short lessons across 9 modules, 10 selected crypto examples, adjustable MA/RSI strategy tests, cost and trend controls, charts and a downloadable practice journal.</p><p className="halyo-muted">One-time lifetime web access. Learning records stay on your browser. Data availability varies; sample prices are labelled.</p><CheckoutLink from="why_pay" style={{color:C.accent,fontWeight:700}}>Buy lifetime access →</CheckoutLink></div>
-          </div>
-          <p className="halyo-muted">Choose Halyo for the learning workflow and convenience. Free tools also offer lessons, quizzes and backtesting. Halyo does not promise better trading results or tell you what to buy.</p>
+            {t:"Learn the basics",d:"Short lessons that explain the chart ideas you’ll practise."},
+            {t:"Try it yourself",d:"Read candles and change simple strategy settings. No coding needed."},
+            {t:"Look beyond the headline",d:"Explore costs, losing periods and the limits of a backtest."},
+          ].map(item=><div key={item.t}><h2>{item.t}</h2><p>{item.d}</p></div>)}
         </section>
 
-        {/* what you get */}
-        <div style={{ marginTop: 56 }}>
-          <div style={{ textAlign: "center", fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>
-            One payment · lifetime web access
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(230px,1fr))", gap: 12 }}>
-            {[
-              { icon: "∞", t: "Lifetime web access", d: "One payment, not a recurring subscription. Confirm the final total shown at checkout." },
-              { icon: "◇", t: "Licence-key activation", d: "After purchase, return to Halyo and enter your licence key to unlock the learning app in your browser." },
-              { icon: "◇", t: "Learning-first", d: "A focused learning workspace for trying concepts and recording observations. No signals, trade execution or promised returns." },
-            ].map((f, i) => (
-              <div key={i} style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 24, color: C.accent, marginBottom: 10, fontFamily: C.mono }}>{f.icon}</div>
-                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{f.t}</div>
-                <div style={{ fontSize: 13, color: C.dim, lineHeight: 1.55 }}>{f.d}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Product proof: only capabilities visible in the app. */}
-        <div style={{ marginTop: 56 }}>
-          <div style={{ textAlign: "center", fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>
-            What you can do inside Halyo
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12}}>
-            {[
-              {label:"LEARN",title:"Plain-language lessons",body:"Build vocabulary and understand how common chart ideas are supposed to work."},
-              {label:"PRACTISE",title:"Candlestick exercises",body:"Identify patterns and read an honest explanation of what each candle can—and cannot—show."},
-              {label:"TEST",title:"Historical backtesting",body:"Change a simple MA/RSI rule, compare earlier and later periods, and inspect costs and losing trades."},
-            ].map((item)=>(
-              <div key={item.label} style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:20,minHeight:150}}>
-                <div style={{fontSize:10,fontFamily:C.mono,color:C.accent,letterSpacing:1.5,marginBottom:18}}>{item.label}</div>
-                <div style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:8}}>{item.title}</div>
-                <div style={{fontSize:13,color:C.dim,lineHeight:1.6}}>{item.body}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-
-        {/* Owner-confirmed customer testimonials. Static cards avoid timed rotation. */}
-        <section aria-labelledby="halyo-feedback-heading" style={{marginTop:56}}>
-          <h2 id="halyo-feedback-heading" style={{textAlign:"center",fontSize:24,fontWeight:800,color:C.text,margin:"0 0 20px"}}>
-            What Halyo learners say
-          </h2>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,260px),1fr))",gap:14}}>
-            {TESTIMONIALS.map((item) => (
-              <figure key={item.name} style={{margin:0,background:C.panel,border:`1px solid ${C.line}`,borderRadius:14,padding:22,overflowWrap:"anywhere"}}>
-                <blockquote style={{margin:"0 0 18px",fontSize:15,color:C.text,lineHeight:1.7}}>
-                  “{item.quote}”
-                </blockquote>
-                <figcaption style={{fontSize:13,color:C.accent,fontWeight:700}}>
-                  {item.name}
-                  <span style={{display:"block",fontSize:12,color:C.dim,fontWeight:400,marginTop:4}}>{item.tag}</span>
-                </figcaption>
-              </figure>
-            ))}
-          </div>
+        <section className="halyo-trust" aria-labelledby="halyo-feedback-heading">
+          <div className="halyo-learner-count"><strong>{LEARNER_COUNT.toLocaleString("en-US")} learners</strong><span>Reached through our marketing activities</span></div>
+          <h2 id="halyo-feedback-heading">What Halyo learners say</h2>
+          <div className="halyo-feedback-grid">{TESTIMONIALS.slice(0,2).map(feedbackCard)}</div>
+          <details className="halyo-more-feedback"><summary>More learner feedback</summary><div className="halyo-feedback-grid">{TESTIMONIALS.slice(2).map(feedbackCard)}</div></details>
         </section>
-        {/* how it works + FAQ */}
+
+        <section id="pricing" className="halyo-simple-price" aria-labelledby="pricing-heading">
+          <div><div className="halyo-kicker">Continue after the demo</div><h2 id="pricing-heading">One place to learn and practise.</h2><p>Free resources are useful. Halyo brings lessons and practice together so you can try a concept while it’s fresh.</p>
+            <ul><li>39 short lessons across 9 modules</li><li>Candlestick practice and 10 crypto examples</li><li>MA/RSI backtesting with cost controls</li><li>Browser-saved progress and a downloadable practice journal</li></ul>
+          </div>
+          <div className="halyo-price-action"><strong>{OFFER_PRICE_LABEL}</strong><p>Lifetime web access. One payment.</p><CheckoutLink from="buy_cta" style={{display:"block",background:C.accent,color:"#08120a",padding:"15px 20px",borderRadius:8,fontWeight:800,textDecoration:"none"}}>Get lifetime access →</CheckoutLink><small>Applicable tax shown at checkout.</small></div>
+        </section>
+
         <HalyoFaq />
+        <div className="halyo-optional-quiz"><button onClick={()=>{track("StartQuiz");setStage("quiz");}}>Not sure where to start? Try the optional quiz →</button></div>
 
-        {/* product rationale */}
-        <div style={{ marginTop: 56, background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 14, padding: "28px 26px", maxWidth: 680, margin: "56px auto 0" }}>
-          <div style={{ fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>
-            Why Halyo exists
-          </div>
-          <p style={{ fontSize: 15, lineHeight: 1.7, color: C.text, margin: "0 0 12px" }}>
-            Crypto narratives can move faster than understanding. Halyo puts explanation and practice
-            before financial decisions, so beginners can inspect an idea instead of relying on a slogan,
-            influencer or single chart pattern.
-          </p>
-          <p style={{ fontSize: 15, lineHeight: 1.7, color: C.dim, margin: 0 }}>
-            It does not predict prices or tell you what to buy. It gives you lessons, practice and a
-            historical testing workspace so you can see uncertainty and losses as well as positive results.
-          </p>
-        </div>
-
-        {/* contact / support */}
-        <div style={{ marginTop: 56, textAlign: "center" }}>
-          <div style={{ fontSize: 11, fontFamily: C.mono, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>
-            Questions? We're here
-          </div>
-          <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 14, padding: "26px 24px", maxWidth: 520, margin: "0 auto" }}>
-            <p style={{ fontSize: 14, color: C.dim, lineHeight: 1.6, margin: "0 0 16px" }}>
-              Ask a question before buying, or get help with checkout and licence activation afterward.
-            </p>
-            <a href="/contact.html" style={{
-              display: "inline-block", background: C.accent, color: "#08120a", textDecoration: "none",
-              borderRadius: 8, padding: "12px 26px", fontSize: 15, fontWeight: 700,
-            }}>Contact us</a>
-            <div style={{ fontSize: 11, color: C.dim, fontFamily: C.mono, marginTop: 14 }}>
-              Lost key · activation help · purchase questions · refund-policy questions
-            </div>
-          </div>
-        </div>
-
-        <div style={{ marginTop: 36, textAlign: "center" }}><Disclaimer /></div>
+        <footer className="halyo-simple-footer">
+          <p>Education only. No wallet connection or trade execution. Historical and labelled sample results do not guarantee future performance.</p>
+          <div><a href="/contact.html">Contact &amp; support</a><a href="/blog/">Blog</a><a href="/whats-new.html">What’s new</a><a href="/risk-disclaimer.html">Risk disclaimer</a><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a></div>
+        </footer>
       </Shell>
     );
   }
+
 
   // ── QUIZ ──
   if (stage === "quiz") {
