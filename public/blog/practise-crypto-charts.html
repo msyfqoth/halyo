@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>How to Practise Crypto Charts Without Placing a Trade | Halyo</title>
-  <meta name="description" content="Try a simple crypto chart exercise: change a moving average, compare training and test results, and learn why a backtest cannot predict your next trade." />
+  <meta name="description" content="Practise reading candles, comparing costs and questioning a backtest in three free browser exercises. No wallet, signup or trade needed." />
   <link rel="canonical" href="https://halyoapp.com/blog/practise-crypto-charts.html" />
   <meta name="robots" content="index, follow" />
   <meta property="og:type" content="article" />
@@ -54,56 +54,42 @@
       <a class="back" href="/blog/">All Halyo guides</a>
     </nav>
     <article>
-      <p class="kicker">Learn · practise · question the result</p>
+      <p class="kicker">A practical place to start</p>
       <h1>How to practise crypto charts without placing a trade</h1>
-      <p class="lede">Recognising a chart pattern and understanding its limits are different skills. A useful practice session gives you something to change, a result to inspect, and a reason to question it.</p>
-      <p>Here is a short exercise you can try in Halyo's free browser demo. You do not need to connect a wallet, open an exchange account or place a trade. The aim is to explain what changed—not to find a setting that promises a profit.</p>
+      <p class="lede">Start with three questions: what does the candle show, what did the test leave out, and does the result hold up on different days?</p>
+      <p>You can explore all three in Halyo's free browser demo. No signup, wallet connection or exchange account needed.</p>
       <p><a class="button" href="/?demo=1">Open the free practice demo →</a></p>
-
-      <h2>1. Check which data you are looking at</h2>
-      <p>The demo tries to load historical Bittensor (TAO) prices. If that data is unavailable, it offers clearly labelled, simulated sample prices so you can still learn the controls.</p>
       <div class="note">
-        <p><strong>Read the label first.</strong> Sample prices are an illustration. Their returns, win rates and equity curve do not describe real TAO performance. Historical prices describe the past; they do not establish what a future trade will do.</p>
+        <p><strong>These guided exercises use illustrative sample prices, not market data.</strong> They teach concepts; their returns are not real cryptocurrency performance or a forecast.</p>
       </div>
 
-      <h2>2. Change one moving average</h2>
-      <p>A moving average smooths recent prices into a line. A shorter window responds to a smaller slice of price history; a longer window smooths a larger slice. The demo uses a simple rule based on the fast and slow averages crossing.</p>
-      <p>Start with the displayed settings. Change the Fast MA from 10 days to 11 days and leave the slow average alone. Watch the explanation, returns, worst dip and number of trades recompute.</p>
-      <p>You are not being given a recommended trading setting. Changing one control at a time simply makes it easier to describe how that control affects this particular test.</p>
+      <h2>1. Read the candle</h2>
+      <p>Choose <strong>“1. Read the candle”</strong>. Look at the two-candle example: the larger green body covers the previous red body. This is called a bullish engulfing pattern.</p>
+      <p>The bodies show the open and close; the wicks show the high and low. Naming the shape describes those periods. It does not guarantee the next candle will rise. Pick an answer to see the explanation.</p>
 
-      <h2>3. Compare the training and test windows</h2>
-      <p>The demo splits its dataset into a training window and a separate test window. Compare both. A rule that looks attractive in one window may look weaker in the other.</p>
-      <p>The separate window is useful for questioning a result. It is not permanently “unseen” if you keep using its result to select your settings. Once you tune against that window, you are using it to make decisions too.</p>
-      <p>A backtest can be shaped to fit a particular dataset—often called overfitting. A strong-looking result on those prices may not carry over to other periods. <a href="https://www.tradingview.com/pine-script-docs/concepts/strategies/">TradingView's strategy documentation discusses this limitation</a>.</p>
+      <h2>2. See what costs change</h2>
+      <p>Choose <strong>“2. See the cost”</strong>. Compare the same sample prices and moving-average rule with no costs and with higher assumed costs. Only that assumption changes.</p>
+      <p>Read the fee and slippage labels under each result. They apply per side, when buying and selling. These are illustrative assumptions, not an exchange quote. Both results include the ending value of an open position.</p>
+      <p>A positive headline return tells you little if you have not checked what went into it.</p>
 
-      <h2>4. Look beyond the headline return</h2>
-      <ul>
-        <li><strong>Worst dip:</strong> how far did the test fall from an earlier peak?</li>
-        <li><strong>Number of trades:</strong> is the result based on only a few opportunities?</li>
-        <li><strong>Costs:</strong> a result depends on the fees and slippage assumptions used. The demo uses fixed illustrative assumptions; actual trading costs can differ.</li>
-        <li><strong>Comparison:</strong> does the apparent improvement survive a change of settings or period? One good-looking example is limited evidence.</li>
-      </ul>
-      <p>A win rate alone does not tell you the size of winning and losing trades. Read it alongside the other results, not as a prediction of how often you will win in the future.</p>
+      <h2>3. Challenge the result</h2>
+      <p>Choose <strong>“3. Challenge the result”</strong>. Select a fast moving average using only the earlier sample window, days 1–234. A moving average smooths recent prices into a line; changing its length changes which crossings the rule follows.</p>
+      <p>Then select <strong>“Record settings &amp; reveal later window”</strong>. Compare the strategy with buy-and-hold over the same later sample days, 235–360, after the displayed costs.</p>
+      <p>Was the result what you expected? If you keep changing settings after seeing the later result, you are using hindsight. It is no longer a fresh test. No AI model is trained in this exercise.</p>
+      <p>Optional observations and completed learning checks stay in this browser when storage is available. Clearing browser data removes them. A completed check does not prove trading skill.</p>
 
-      <section class="exercise" aria-labelledby="practice-check">
-        <h2 id="practice-check">Finish with three questions</h2>
-        <ol>
-          <li>Was I using historical data or simulated sample prices?</li>
-          <li>What changed when I moved the fast average from 10 to 11?</li>
-          <li>Why does that result still not tell me what to buy tomorrow?</li>
-        </ol>
-        <p>If you can answer these in your own words, you have a concrete observation to build on. If not, revisit the label and change just one setting again.</p>
-      </section>
+      <h2>What to look at next</h2>
+      <p>Below the exercises is a one-asset moving-average demo. Read its data-source label first: it tries historical TAO prices and uses labelled sample prices if market data is unavailable. You can also choose sample prices while it loads.</p>
+      <p>Change one average at a time. Compare earlier and later returns, worst dip and trade count, rather than picking the largest return. The windows restart in cash; the linked curve is an illustration, not one continuous strategy.</p>
+      <p>Backtests depend on their cost assumptions and can be overfitted to past prices. <a href="https://www.tradingview.com/pine-script-docs/concepts/strategies/">TradingView's strategy documentation explains these limitations</a>. Neither historical nor sample results establish future profitability.</p>
 
-      <h2>Where Halyo fits</h2>
-      <p>Halyo brings plain-language lessons, candlestick practice and historical strategy testing together in a browser. The free demo is a small exercise you can use before deciding whether the full app suits your learning needs.</p>
-      <p>The full licence is US$39 for lifetime web access. Confirm the final total, currency and any tax at checkout. It does not place trades, connect to your wallet or provide buy/sell signals.</p>
       <section class="cta" aria-labelledby="try-demo">
-        <h2 id="try-demo">Try the exercise yourself</h2>
-        <p>Open the demo, read the data-source label, and change one average. No signup or payment details are required for the demo.</p>
-        <a class="button" href="/?demo=1">Practise in the free demo →</a>
+        <h2 id="try-demo">Try it before deciding</h2>
+        <p>Halyo's full browser workspace combines 39 short lessons across 9 modules, candlestick practice, MA/RSI backtesting with cost controls, and browser-saved progress and a downloadable practice journal.</p>
+        <p>US$39, paid once for lifetime web access, plus any applicable checkout tax. Free courses and tools also exist; try the demo and decide whether having this workflow together is useful to you.</p>
+        <a class="button" href="/?demo=1">Try the three free exercises →</a>
       </section>
-      <p>Questions about access or activation? <a href="/contact.html">Contact Halyo</a>.</p>
+      <p>Halyo does not place trades or provide buy/sell signals. Questions about the app? <a href="/contact.html">Contact Halyo</a>.</p>
     </article>
     <footer>
       Prepared by Halyo for education and practice. Not financial advice. Crypto can lose value, and no historical test guarantees future results.
@@ -112,3 +98,4 @@
   </main>
 </body>
 </html>
+
