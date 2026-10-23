@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How to Practise Crypto Charts Without Placing a Trade | Halyo</title>
+  <meta name="description" content="Practise reading candles, comparing costs and questioning a backtest in three free browser exercises. No wallet, signup or trade needed." />
+  <link rel="canonical" href="https://halyoapp.com/blog/practise-crypto-charts.html" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="How to Practise Crypto Charts Without Placing a Trade" />
+  <meta property="og:description" content="A short, practical exercise for questioning a historical strategy result." />
+  <meta property="og:url" content="https://halyoapp.com/blog/practise-crypto-charts.html" />
+  <meta property="og:image" content="https://halyoapp.com/halyo-og.png" />
+  <!-- Preserve the existing Ads destination; measure production blog visits in GA4. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18499104388"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'AW-18499104388');
+    if (['halyoapp.com', 'www.halyoapp.com'].includes(window.location.hostname)) {
+      gtag('config', 'G-85ZCNXLSDS');
+    }
+  </script>
+  <style>
+    :root{color-scheme:dark;--bg:#0a0e14;--panel:#0d131c;--line:#263446;--text:#c8d3e0;--dim:#94a3b8;--accent:#4ade80;--blue:#38bdf8}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.75}
+    .wrap{max-width:780px;margin:auto;padding:24px 20px 60px}
+    .top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+    .brand{font-size:23px;font-weight:800;color:var(--text);text-decoration:none}.brand span{color:var(--accent)}
+    a{color:var(--blue);text-underline-offset:3px;overflow-wrap:anywhere}
+    .back{font-size:14px;display:inline-flex;align-items:center;min-height:44px}
+    .kicker{font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent);margin:28px 0 10px}
+    h1{font-size:clamp(30px,5vw,42px);line-height:1.16;letter-spacing:-1px;color:#eef3f9;margin:0 0 18px;overflow-wrap:break-word}
+    h2{font-size:23px;line-height:1.3;color:#eef3f9;margin:32px 0 12px}
+    p,li{font-size:16px}p{margin:0 0 17px}li{margin:8px 0}ul,ol{padding-left:24px}
+    .lede{font-size:18px;color:var(--dim)}
+    .note,.exercise,.cta{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin:24px 0}
+    .note{border-left:3px solid #f59e0b}.note p:last-child,.exercise p:last-child{margin-bottom:0}
+    .cta{border-color:var(--accent)}.cta h2{margin-top:0}
+    .button{display:inline-block;max-width:100%;padding:12px 20px;min-height:48px;background:var(--accent);color:#08120a;font-weight:800;border-radius:8px;text-decoration:none;text-align:center}
+    :focus-visible{outline:3px solid var(--blue);outline-offset:4px}
+    footer{border-top:1px solid var(--line);padding-top:20px;margin-top:32px;font-size:13px;color:var(--dim)}
+    footer nav{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px}footer a{display:inline-flex;align-items:center;min-height:44px}
+    @media(max-width:480px){.wrap{padding:18px 16px 44px}.note,.exercise,.cta{padding:17px}.button{display:block}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <nav class="top" aria-label="Main navigation">
+      <a class="brand" href="/" aria-label="Halyo home">Hal<span>yo</span></a>
+      <a class="back" href="/blog/">All Halyo guides</a>
+    </nav>
+    <article>
+      <p class="kicker">A practical place to start</p>
+      <h1>How to practise crypto charts without placing a trade</h1>
+      <p class="lede">Start with three questions: what does the candle show, what did the test leave out, and does the result hold up on different days?</p>
+      <p>You can explore all three in Halyo's free browser demo. No signup, wallet connection or exchange account needed.</p>
+      <p><a class="button" href="/?demo=1">Open the free practice demo →</a></p>
+      <div class="note">
+        <p><strong>These guided exercises use illustrative sample prices, not market data.</strong> They teach concepts; their returns are not real cryptocurrency performance or a forecast.</p>
+      </div>
+
+      <h2>1. Read the candle</h2>
+      <p>Choose <strong>“1. Read the candle”</strong>. Look at the two-candle example: the larger green body covers the previous red body. This is called a bullish engulfing pattern.</p>
+      <p>The bodies show the open and close; the wicks show the high and low. Naming the shape describes those periods. It does not guarantee the next candle will rise. Pick an answer to see the explanation.</p>
+
+      <h2>2. See what costs change</h2>
+      <p>Choose <strong>“2. See the cost”</strong>. Compare the same sample prices and moving-average rule with no costs and with higher assumed costs. Only that assumption changes.</p>
+      <p>Read the fee and slippage labels under each result. They apply per side, when buying and selling. These are illustrative assumptions, not an exchange quote. Both results include the ending value of an open position.</p>
+      <p>A positive headline return tells you little if you have not checked what went into it.</p>
+
+      <h2>3. Challenge the result</h2>
+      <p>Choose <strong>“3. Challenge the result”</strong>. Select a fast moving average using only the earlier sample window, days 1–234. A moving average smooths recent prices into a line; changing its length changes which crossings the rule follows.</p>
+      <p>Then select <strong>“Record settings &amp; reveal later window”</strong>. Compare the strategy with buy-and-hold over the same later sample days, 235–360, after the displayed costs.</p>
+      <p>Was the result what you expected? If you keep changing settings after seeing the later result, you are using hindsight. It is no longer a fresh test. No AI model is trained in this exercise.</p>
+      <p>Optional observations and completed learning checks stay in this browser when storage is available. Clearing browser data removes them. A completed check does not prove trading skill.</p>
+
+      <h2>What to look at next</h2>
+      <p>Below the exercises is a one-asset moving-average demo. Read its data-source label first: it tries historical TAO prices and uses labelled sample prices if market data is unavailable. You can also choose sample prices while it loads.</p>
+      <p>Change one average at a time. Compare earlier and later returns, worst dip and trade count, rather than picking the largest return. The windows restart in cash; the linked curve is an illustration, not one continuous strategy.</p>
+      <p>Backtests depend on their cost assumptions and can be overfitted to past prices. <a href="https://www.tradingview.com/pine-script-docs/concepts/strategies/">TradingView's strategy documentation explains these limitations</a>. Neither historical nor sample results establish future profitability.</p>
+
+      <section class="cta" aria-labelledby="try-demo">
+        <h2 id="try-demo">Try it before deciding</h2>
+        <p>Halyo's full browser workspace combines 39 short lessons across 9 modules, candlestick practice, MA/RSI backtesting with cost controls, and browser-saved progress and a downloadable practice journal.</p>
+        <p>US$39, paid once for lifetime web access, plus any applicable checkout tax. Free courses and tools also exist; try the demo and decide whether having this workflow together is useful to you.</p>
+        <a class="button" href="/?demo=1">Try the three free exercises →</a>
+      </section>
+      <p>Halyo does not place trades or provide buy/sell signals. Questions about the app? <a href="/contact.html">Contact Halyo</a>.</p>
+    </article>
+    <footer>
+      Prepared by Halyo for education and practice. Not financial advice. Crypto can lose value, and no historical test guarantees future results.
+      <nav aria-label="Footer navigation"><a href="/">Halyo home</a><a href="/blog/">All guides</a><a href="/risk-disclaimer.html">Risk information</a><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a></nav>
+    </footer>
+  </main>
+</body>
+</html>
+

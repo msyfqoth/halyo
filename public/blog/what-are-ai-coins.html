@@ -8,20 +8,23 @@
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
     gtag('config', 'AW-18499104388');
+    if (['halyoapp.com', 'www.halyoapp.com'].includes(window.location.hostname)) {
+      gtag('config', 'G-85ZCNXLSDS');
+    }
   </script>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>What Are AI Coins? A Beginner's Guide (2026) | Halyo</title>
-<meta name="description" content="What are AI crypto coins? A plain-language beginner's guide to Bittensor, NEAR, Render, Worldcoin and more — what they do, who's behind them, and the honest risks." />
+<title>What Are AI Coins? A Beginner's Guide | Halyo</title>
+<meta name="description" content="Understand what people mean by AI crypto coins, how project claims differ from token value, and what to check before trusting the label." />
 <link rel="canonical" href="https://halyoapp.com/blog/what-are-ai-coins.html" />
 <meta name="robots" content="index, follow" />
 <meta property="og:type" content="article" />
 <meta property="og:title" content="What Are AI Coins? A Beginner's Guide" />
-<meta property="og:description" content="A plain-language guide to AI crypto coins — what they do, who's behind them, and the honest risks." />
+<meta property="og:description" content="Understand what people mean by AI crypto coins, how project claims differ from token value, and what to check before trusting the label." />
 <meta property="og:url" content="https://halyoapp.com/blog/what-are-ai-coins.html" />
 <meta property="og:image" content="https://halyoapp.com/halyo-og.png" />
 <style>
-  :root{--bg:#0a0e14;--panel:#0d131c;--panel2:#111721;--line:#1e2836;--text:#c8d3e0;--dim:#5c6a7e;--accent:#4ade80;--blue:#38bdf8;--warn:#f59e0b}
+  :root{--bg:#0a0e14;--panel:#0d131c;--panel2:#111721;--line:#1e2836;--text:#c8d3e0;--dim:#94a3b8;--accent:#4ade80;--blue:#38bdf8;--warn:#f59e0b}
   *{box-sizing:border-box}
   body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;line-height:1.75;margin:0}
   .wrap{max-width:720px;margin:0 auto;padding:28px 20px 70px}
@@ -45,6 +48,10 @@
   footer{margin-top:40px;font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.7}
   footer a{color:var(--dim)}
   .back{display:inline-block;margin-top:30px;font-size:13px;color:var(--dim);text-decoration:none;font-family:'JetBrains Mono',monospace}
+  a{overflow-wrap:anywhere;text-underline-offset:3px}
+  .top{flex-wrap:wrap;gap:12px}
+  .top a.home,.back{min-height:44px;display:inline-flex;align-items:center}
+  :focus-visible{outline:3px solid var(--blue);outline-offset:4px}
 </style>
 </head>
 <body>
@@ -55,49 +62,31 @@
   </div>
 
   <div class="kicker">Beginner's guide</div>
-  <h1>What are AI coins? A plain-language guide</h1>
-
-  <p>"AI coins" are one of the hottest topics in crypto right now. You've probably seen the headlines — a coin called Bittensor up hundreds of percent, influencers shouting about "the next 100x AI gem," endless promises of easy money.</p>
-
-  <p>Before you go anywhere near them, it helps to understand what they actually <em>are</em>. This guide explains it simply — no jargon, no hype.</p>
-
-  <h2>The simple definition</h2>
-  <p>An <strong>AI coin</strong> is a cryptocurrency connected to an artificial-intelligence project. The project might build tools for AI, provide computing power for AI, or try to decentralise AI so it isn't controlled by a few big companies. The coin is how the project raises money and (in theory) how its network runs.</p>
-
-  <p>That's the key thing to understand: an AI coin is <strong>not AI itself</strong>. It's a token tied to a project that works on AI. Whether that project succeeds — and whether the coin's price reflects anything real — is a completely separate question.</p>
-
-  <h2>The main AI coins you'll hear about</h2>
+  <h1>What are AI coins?</h1>
+  <p>“AI coin” is a loose label for a cryptocurrency associated with an artificial-intelligence project or narrative. The label alone tells you little about what the software does or why its token might be needed.</p>
+  <h2>Start with the project, then the token</h2>
+  <p>A project might supply computing resources, coordinate AI services, or use AI in an application. Those are different activities. A token does not automatically give you ownership of an AI model, shares in the developer, or rights to its revenue. Check its specific terms.</p>
+  <p>Ask two separate questions: <strong>what does the product do, and what role does this specific token play?</strong> A useful product does not by itself establish a fair token price.</p>
+  <h2>Two examples, not a ranking</h2>
   <ul>
-    <li><strong>Bittensor (TAO)</strong> — a network where AI models compete to do useful work and earn tokens. The biggest "AI coin" by market value.</li>
-    <li><strong>NEAR Protocol (NEAR)</strong> — a blockchain positioning itself as the home for autonomous "AI agents." Co-founded by someone who helped write the original research behind modern AI.</li>
-    <li><strong>Render (RENDER)</strong> — a marketplace that rents out spare GPU computing power for graphics and AI work. One of the few with a real, working use case.</li>
-    <li><strong>Chainlink (LINK)</strong> — infrastructure that feeds real-world data into blockchains. More "plumbing" than hype, and one of the oldest projects in crypto.</li>
-    <li><strong>Worldcoin (WLD)</strong> — tries to prove you're a real human (via iris scans) in a world full of AI bots. Co-founded by the CEO of OpenAI — and genuinely controversial.</li>
+    <li><strong>Bittensor:</strong> its <a href="https://www.bittensor.com/docs">documentation</a> describes subnets producing digital services such as compute and inference, with participants rewarded through the network. TAO is its native token.</li>
+    <li><strong>Render Network:</strong> its <a href="https://rendernetwork.com/about">project overview</a> describes distributed GPU rendering and compute, including creative and generative-AI work.</li>
   </ul>
-  <p>There are many more (Fetch/ASI, The Graph, Virtuals, Celestia and others), each with a different angle on "AI + blockchain."</p>
-
-  <h2>Why are they so volatile?</h2>
-  <p>AI coins move <strong>much</strong> more than Bitcoin or Ethereum. A 20–50% swing in a week is normal; some have fallen 80–90% from their highs. Why?</p>
+  <p>These are project descriptions, not independent endorsements, a complete market list or recommendations to buy. Names, products and token arrangements can change; check current primary documentation.</p>
+  <h2>Questions worth writing down</h2>
   <ul>
-    <li><strong>They run on narrative.</strong> When AI is in the headlines, money floods in. When attention moves on, it drains out just as fast.</li>
-    <li><strong>They're smaller.</strong> Less money is needed to move the price — up or down.</li>
-    <li><strong>A lot is speculation, not usage.</strong> Many of these projects are early. People are betting on a <em>story</em> about the future, not on proven results today.</li>
+    <li>Can I explain the working product without repeating its marketing?</li>
+    <li>What evidence supports the claimed usage?</li>
+    <li>What rights or functions does the token actually provide?</li>
+    <li>What am I still assuming about its future price?</li>
   </ul>
-
-  <div class="note">
-    <strong>The honest part:</strong> the fact that AI is genuinely important does <em>not</em> mean AI coins are a good investment. A real technology trend and a good bet are two different things. Most people who trade these actively lose money.
-  </div>
-
-  <h2>How to think about them clearly</h2>
-  <p>You don't need to avoid AI coins out of fear — but you do need to go in clear-headed. Before you ever consider one, you should be able to answer: What does this project actually do? Who's behind it? Is anyone really using it, or is it just a story? And crucially — <strong>am I buying because I understand it, or because I'm afraid of missing out?</strong></p>
-
-  <p>Learning to answer those questions honestly is worth far more than any "signal" or hot tip. That's exactly what Halyo is built to teach.</p>
-
+  <div class="note">AI branding does not establish investment quality. The <a href="https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-alerts/artificial-intelligence-fraud">SEC, NASAA and FINRA's January 2024 alert</a> warns about misleading AI-related investment promotions. Crypto assets can lose value; a learning exercise cannot remove that risk.</div>
   <div class="cta">
-    <h3>See how AI-coin strategies really perform</h3>
-    <p>Test a simple strategy on real AI-coin data and see the honest result — losses and all. Free demo, no signup.</p>
+    <h3>Put a concept into practice</h3>
+    <p>Try Halyo's free exercises on candles, costs and questioning a backtest. Guided exercises use illustrative sample prices, not market data. No signup needed.</p>
     <a href="/?demo=1">Try the free demo →</a>
   </div>
+  <p>Halyo is a learning app, not a token-rating service, fraud detector or source of buy/sell signals. It does not place trades.</p>
 
   <a class="back" href="/blog/">← back to all articles</a>
 
