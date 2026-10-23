@@ -2009,13 +2009,20 @@ function DemoLab({ onExit }){
 
         <div style={{marginBottom:18}}>
           <div style={{fontSize:11,fontFamily:C.mono,color:C.accent,letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>Try it free · no signup</div>
-          <h1 style={{fontSize:30,fontWeight:800,letterSpacing:-1,margin:"0 0 8px",color:C.text,lineHeight:1.15}}>{isSample?"Explore a strategy with sample prices":"Test an AI-coin strategy on real data"}</h1>
+          <h1 style={{fontSize:30,fontWeight:800,letterSpacing:-1,margin:"0 0 8px",color:C.text,lineHeight:1.15}}>Try three guided chart exercises</h1>
           <p style={{fontSize:14.5,color:C.dim,lineHeight:1.6,margin:0,maxWidth:620}}>
-            {isSample?"This practice dataset is generated for illustration. Adjust the moving averages and compare the earlier and later windows. These are not real cryptocurrency prices.":"Build a simple moving-average strategy and explore Bittensor (TAO) history, split into earlier and later windows. This is a taste of the full Strategy Lab."}
+            Read a candle, explore costs and question a backtest. These exercises use illustrative sample prices.
           </p>
         </div>
 
         <PracticeMissions/>
+
+        <div style={{margin:"24px 0 16px"}}>
+          <h2 style={{fontSize:22,fontWeight:800,color:C.text,margin:"0 0 8px"}}>Moving-average lab</h2>
+          <p style={{fontSize:13.5,color:C.dim,lineHeight:1.6,margin:0}}>
+            {loadState==="loading"?"Checking TAO history. You can use sample prices while it loads.":isSample?"This lab uses illustrative sample prices, not TAO history. Change the averages and compare the earlier and later windows.":"This lab uses historical TAO prices. Change the averages and compare the earlier and later windows."}
+          </p>
+        </div>
 
         {/* one piece of coin info (the full guide to all coins is inside the app) */}
         {!isSample&&<div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"16px 18px",marginBottom:20}}>
@@ -2025,7 +2032,7 @@ function DemoLab({ onExit }){
           </div>
           <p style={{fontSize:13,color:C.dim,lineHeight:1.6,margin:0}}>
             <span style={{color:C.accent,fontWeight:700}}>What it is — </span>
-            A network where AI models compete to do useful work and earn TAO — the biggest "decentralized AI" coin. Like all AI coins, it's very volatile: big rallies and deep drops. The full Halyo app explains all 10 AI coins like this.
+            TAO is the token of the Bittensor network. It is one example for this practice lab, not a recommendation to buy.
           </p>
         </div>}
 

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <title>Halyo — Crypto lessons. Hands-on practice.</title>
+  <desc>Brand card for Halyo's three free guided exercises: read the candle, see the cost and challenge the result. This is a text graphic, not a product screenshot or a performance chart.</desc>
+  <rect width="1200" height="630" fill="#0a0e14"/>
+  <rect x="0" y="0" width="1200" height="8" fill="#4ade80"/>
+  <g font-family="DejaVu Sans, sans-serif">
+    <text x="64" y="87" font-size="38" font-weight="bold" fill="#e8eef5">Hal<tspan fill="#4ade80">yo</tspan></text>
+    <text x="1136" y="83" text-anchor="end" font-size="18" font-weight="bold" letter-spacing="2" fill="#9baec2">FREE GUIDED DEMO</text>
+    <text x="60" y="198" font-size="68" font-weight="bold" letter-spacing="-2" fill="#e8eef5">Crypto lessons.</text>
+    <text x="60" y="280" font-size="68" font-weight="bold" letter-spacing="-2" fill="#4ade80">Hands-on practice.</text>
+    <text x="64" y="338" font-size="25" fill="#bbc9d8">Read a candle. Explore costs. Question a backtest.</text>
+    <g transform="translate(64 389)">
+      <rect width="344" height="105" rx="14" fill="#101822" stroke="#293849"/>
+      <text x="22" y="35" font-size="16" font-weight="bold" fill="#4ade80">01</text>
+      <text x="22" y="75" font-size="24" font-weight="bold" fill="#e8eef5">Read the candle</text>
+    </g>
+    <g transform="translate(428 389)">
+      <rect width="344" height="105" rx="14" fill="#101822" stroke="#293849"/>
+      <text x="22" y="35" font-size="16" font-weight="bold" fill="#38bdf8">02</text>
+      <text x="22" y="75" font-size="24" font-weight="bold" fill="#e8eef5">See the cost</text>
+    </g>
+    <g transform="translate(792 389)">
+      <rect width="344" height="105" rx="14" fill="#101822" stroke="#293849"/>
+      <text x="22" y="35" font-size="16" font-weight="bold" fill="#a9b7ce">03</text>
+      <text x="22" y="75" font-size="24" font-weight="bold" fill="#e8eef5">Challenge the result</text>
+    </g>
+    <text x="64" y="567" font-size="23" fill="#b8c7d8">Three exercises · No signup needed</text>
+    <text x="1136" y="567" text-anchor="end" font-size="23" font-weight="bold" fill="#4ade80">halyoapp.com</text>
+  </g>
+</svg>
