@@ -33,7 +33,7 @@
 <div class="wrap">
   <div class="brand">Hal<span>yo</span></div>
   <h1>Contact us</h1>
-  <p class="sub">Lost your key, want a refund, or have a question? Send a message — we usually reply within a day.</p>
+  <p class="sub">Lost your key, want a refund, or have a question? Send a message with your question or the problem you encountered.</p>
 
   <!-- Netlify Forms: the data-netlify attribute makes Netlify capture submissions.
        The hidden form-name input is required. A honeypot field reduces spam. -->
@@ -56,11 +56,12 @@
       <option>Something else</option>
     </select>
 
-    <label for="order">Order / license key (if you have one)</label>
-    <input id="order" type="text" name="order" placeholder="optional — helps us find your purchase" />
+    <label for="order">Order number (optional)</label>
+    <input id="order" type="text" name="order" placeholder="From your receipt, if available" />
 
     <label for="message">Message</label>
-    <textarea id="message" name="message" required></textarea>
+    <textarea id="message" name="message" required aria-describedby="message-help"></textarea>
+    <p id="message-help" class="note">Please don't include your license key, password, wallet seed phrase or payment card details.</p>
 
     <button type="submit">Send message</button>
   </form>
