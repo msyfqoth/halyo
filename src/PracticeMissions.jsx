@@ -18,7 +18,7 @@ export function CandlePair() {
   </svg>;
 }
 
-export default function PracticeMissions() {
+export default function PracticeMissions({ onPracticeEvent } = {}) {
   const [active, setActive] = useState(0);
   const [saved, setSaved, storageOk] = useLearningStore("halyo_missions_v1", { done: [false, false, false], notes: ["", "", ""] }, valid);
   const [answer, setAnswer] = useState(null);
@@ -30,7 +30,11 @@ export default function PracticeMissions() {
   const high = useMemo(() => runBacktest(sample, { ...configuration(10), costBps: 50, slipBps: 5 }), []);
   const earlier = useMemo(() => runBacktest(sample.slice(0, 234), configuration(fast)), [fast]);
   const titles = ["Read the candle", "See the cost", "Challenge the result"];
+  const reportPractice = correct => {
+    try { onPracticeEvent?.(["candle", "cost", "challenge"][active], correct); } catch { /* Optional analytics. */ }
+  };
   const pick = correct => {
+    reportPractice(correct === true);
     setAnswer(correct); setNotice("");
     if (correct) setSaved(v => ({ ...v, done: v.done.map((done, i) => i === active ? true : done) }));
   };
@@ -64,11 +68,12 @@ export default function PracticeMissions() {
       {active === 2 && <>
         <p>Choose a fast average using only the earlier sample window (days 1–234). Record it before revealing the later window (days 235–360).</p>
         <label className="halyo-field">Fast average: {fast} days · slow average: 30 days
-          <input aria-label="Mission fast average" type="range" min="2" max="29" value={fast} onChange={e => { setFast(+e.target.value); setRevealed(null); setAnswer(null); }}/>
+          <input aria-label="Mission fast average" type="range" min="2" max="29" value={fast} onChange={e => { reportPractice(false); setFast(+e.target.value); setRevealed(null); setAnswer(null); }}/>
         </label>
         <p>Earlier sample return: <strong>{pct(earlier.metrics.totalReturn)}</strong>. Assumed fee 0.10% + slippage 0.05% per side.</p>
         {!revealed ? <button className="halyo-action" onClick={() => {
           const later = runBacktest(sample.slice(234), configuration(fast));
+          reportPractice(false);
           setRevealed({ fast, earlier, later });
           const record = `Sample prices, MA ${fast}/30. Earlier days 1–234: ${pct(earlier.metrics.totalReturn)}. Later days 235–360: strategy ${pct(later.metrics.totalReturn)}, hold ${pct(later.metrics.buyHold)}. Fee 0.10% + slippage 0.05% per side. Repeated tuning uses hindsight.`;
           setNote(record); setSaved(v => ({ ...v, notes: v.notes.map((text, i) => i === 2 ? record : text) }));
@@ -90,3 +95,4 @@ export default function PracticeMissions() {
     <p className="halyo-muted" aria-live="polite">{saved.done.filter(Boolean).length}/3 learning checks completed. {storageOk ? "Progress and observations stay on this browser, not in a cloud account. Clearing browser data removes them." : "Browser storage is unavailable. Progress lasts only while this page stays open."}</p>
   </section>;
 }
+
