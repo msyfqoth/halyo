@@ -7,6 +7,7 @@ import "./halyo.css";
 import { sma, runBacktest, walkForward, interpretTest, joinedEquity, createSampleData, validProgress } from "./learning.js";
 import { useLearningStore } from "./useLearningStore.js";
 import PracticeMissions, { CandlePair } from "./PracticeMissions.jsx";
+import { createPracticeTracker } from "./practiceTracking.js";
 import PaperPractice from "./PaperPractice.jsx";
 
 // ─────────────────────────────────────────────────────────────
@@ -1339,7 +1340,7 @@ function trackGoogle(event, data = {}) {
   const names = { InitiateCheckout: "begin_checkout", StartQuiz: "quiz_start" };
   const name = names[event] || event;
   // Purchases belong to verified checkout/order reporting, never this funnel.
-  if (!["begin_checkout", "quiz_start", "license_activation", "demo_start", "demo_complete"].includes(name)) return;
+  if (!["begin_checkout", "quiz_start", "license_activation", "demo_start", "demo_complete", "practice_start", "practice_complete"].includes(name)) return;
   const payload = { ...data, send_to: "G-85ZCNXLSDS" };
   if (name === "begin_checkout") {
     payload.items = [{ item_id: "halyo-lifetime", item_name: "Halyo lifetime access", price: OFFER_PRICE_USD, quantity: 1 }];
@@ -1361,6 +1362,7 @@ function track(event, data = {}) {
 const CHECKOUT_URL = "https://planmancorp.lemonsqueezy.com/checkout/buy/46aa0ebf-67d9-4ec6-9a76-41ed05c75bdc";
 const OFFER_PRICE_USD = 39;
 const OFFER_PRICE_LABEL = "US$39";
+const trackDemoPractice = createPracticeTracker(trackGoogle);
 
 // Owner-confirmed offline learner total, corrected on 15 October 2026.
 // Learners are not paid orders; keep this separate from online sales metrics.
@@ -2015,7 +2017,7 @@ function DemoLab({ onExit }){
           </p>
         </div>
 
-        <PracticeMissions/>
+        <PracticeMissions onPracticeEvent={trackDemoPractice}/>
 
         <div style={{margin:"24px 0 16px"}}>
           <h2 style={{fontSize:22,fontWeight:800,color:C.text,margin:"0 0 8px"}}>Moving-average lab</h2>
@@ -2174,3 +2176,4 @@ export default function App(){
   }
   return <TradeApp initialProfile={chosenProfile} />;
 }
+
